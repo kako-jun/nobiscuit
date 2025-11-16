@@ -1,41 +1,61 @@
-# catch-in-the-corn
+# Catch in the Corn - トウモロコシ畑からの脱出
 
-## Project setup
+ウィザードリィ風の3D迷路ゲーム。レイキャスティングによる疑似3D一人称視点で、トウモロコシ畑から脱出することが目的です。
 
-```
+## 特徴
+
+- **疑似3D一人称視点**: レイキャスティングによるウィザードリィ風の描画
+- **スマホ対応**: ブラウザで動作、タッチ操作に対応
+- **ミニマップ**: 右下に2Dマップをオーバーレイ表示
+- **シンプル構成**: TypeScript + Phaser + Webpack
+
+## セットアップ
+
+```bash
 npm install
 ```
 
-### Compiles and hot-reloads for development
+## 開発サーバーの起動
 
-```
-npm run serve
+```bash
+npm start
+# または
+npm run dev
 ```
 
-### Compiles and minifies for production
+ブラウザで http://localhost:8080 を開いてください。
 
-```
+## ビルド
+
+```bash
 npm run build
 ```
 
-### Run your unit tests
+`dist/` ディレクトリに本番用ファイルが生成されます。
 
-```
-npm run test:unit
-```
+## 操作方法
 
-### Run your end-to-end tests
+### キーボード
+- **W / ↑**: 前進
+- **S / ↓**: 後退
+- **A / ←**: 左回転
+- **D / →**: 右回転
 
-```
-npm run test:e2e
-```
+### タッチ操作
+- **画面上部タップ**: 前進
+- **画面下部タップ**: 後退
+- **画面左側タップ**: 左回転
+- **画面右側タップ**: 右回転
 
-### Lints and fixes files
+## 技術スタック
 
-```
-npm run lint
-```
+- TypeScript
+- Phaser 3
+- Webpack 5
 
-### Customize configuration
+## ゲーム仕様
 
-See [Configuration Reference](https://cli.vuejs.org/config/).
+- 迷路内を一人称視点で探索
+- トウモロコシ畑の壁が立ち並ぶ
+- ゴール（金色のマス）に到達すると脱出成功
+- ミニマップでリアルタイムに位置と向きを確認可能
