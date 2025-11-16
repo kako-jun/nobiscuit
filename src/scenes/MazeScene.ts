@@ -6,10 +6,10 @@ export default class MazeScene extends Phaser.Scene {
   private maze: number[][] = [];
   private signs: Map<string, string> = new Map();
 
-  // プレイヤー位置と向き
-  private playerX: number = 1.5;
-  private playerY: number = 1.5;
-  private playerAngle: number = 0; // ラジアン
+  // プレイヤー位置と向き（グリッドベース）
+  private playerX: number = 1; // グリッド位置（整数）
+  private playerY: number = 1; // グリッド位置（整数）
+  private playerDir: number = 0; // 方向 0=東, 1=南, 2=西, 3=北
 
   // レイキャスティング設定
   private readonly FOV = Math.PI / 3; // 視野角60度
@@ -24,6 +24,10 @@ export default class MazeScene extends Phaser.Scene {
   // 入力
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd: any = {};
+
+  // キーリピート防止
+  private lastKeyPressTime: number = 0;
+  private keyRepeatDelay: number = 200; // ms
 
   // 看板表示状態
   private currentSignMessage: string = '';
@@ -69,67 +73,113 @@ export default class MazeScene extends Phaser.Scene {
       right: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
 
-    // タッチ操作
+    // タッチ操作エリアを4分割
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      const now = Date.now();
+      if (now - this.lastKeyPressTime < this.keyRepeatDelay) return;
+      this.lastKeyPressTime = now;
+
       const centerX = this.scale.width / 2;
       const centerY = this.scale.height / 2;
 
-      // 画面を4分割：上=前進、下=後退、左=左回転、右=右回転
       if (pointer.y < centerY) {
-        this.movePlayer(0.1);
+        // 上半分：前進
+        this.moveForward();
       } else {
-        this.movePlayer(-0.1);
+        // 下半分：後退
+        this.moveBackward();
       }
 
       if (pointer.x < centerX) {
-        this.playerAngle -= 0.1;
+        // 左半分：左回転
+        this.turnLeft();
       } else {
-        this.playerAngle += 0.1;
+        // 右半分：右回転
+        this.turnRight();
       }
     });
   }
 
   update(time: number, delta: number) {
-    this.handleInput(delta);
+    this.handleInput();
     this.checkNearbySign();
     this.render3DView();
     this.renderMinimap();
   }
 
-  private handleInput(delta: number) {
-    const moveSpeed = 2 / 1000; // マス/ms
-    const rotateSpeed = 2 / 1000; // ラジアン/ms
+  private handleInput() {
+    const now = Date.now();
+    if (now - this.lastKeyPressTime < this.keyRepeatDelay) return;
 
-    // 前進・後退
-    if (this.cursors.up.isDown || this.wasd.up.isDown) {
-      this.movePlayer(moveSpeed * delta);
+    // 前進
+    if (Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.wasd.up)) {
+      this.lastKeyPressTime = now;
+      this.moveForward();
     }
-    if (this.cursors.down.isDown || this.wasd.down.isDown) {
-      this.movePlayer(-moveSpeed * delta);
+    // 後退
+    else if (Phaser.Input.Keyboard.JustDown(this.cursors.down) || Phaser.Input.Keyboard.JustDown(this.wasd.down)) {
+      this.lastKeyPressTime = now;
+      this.moveBackward();
     }
-
-    // 回転
-    if (this.cursors.left.isDown || this.wasd.left.isDown) {
-      this.playerAngle -= rotateSpeed * delta;
+    // 左回転
+    else if (Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.wasd.left)) {
+      this.lastKeyPressTime = now;
+      this.turnLeft();
     }
-    if (this.cursors.right.isDown || this.wasd.right.isDown) {
-      this.playerAngle += rotateSpeed * delta;
+    // 右回転
+    else if (Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.wasd.right)) {
+      this.lastKeyPressTime = now;
+      this.turnRight();
     }
   }
 
-  private movePlayer(distance: number) {
-    const newX = this.playerX + Math.cos(this.playerAngle) * distance;
-    const newY = this.playerY + Math.sin(this.playerAngle) * distance;
+  private moveForward() {
+    const angle = this.getAngle();
+    const newX = this.playerX + Math.round(Math.cos(angle));
+    const newY = this.playerY + Math.round(Math.sin(angle));
 
-    // 壁判定
-    if (this.maze[Math.floor(newY)][Math.floor(newX)] !== 1) {
+    if (this.canMoveTo(newX, newY)) {
       this.playerX = newX;
       this.playerY = newY;
+      this.checkGoal();
+    }
+  }
 
-      // ゴール判定
-      if (this.maze[Math.floor(newY)][Math.floor(newX)] === 2) {
-        this.showGoalMessage();
-      }
+  private moveBackward() {
+    const angle = this.getAngle();
+    const newX = this.playerX - Math.round(Math.cos(angle));
+    const newY = this.playerY - Math.round(Math.sin(angle));
+
+    if (this.canMoveTo(newX, newY)) {
+      this.playerX = newX;
+      this.playerY = newY;
+      this.checkGoal();
+    }
+  }
+
+  private turnLeft() {
+    this.playerDir = (this.playerDir + 3) % 4; // -90度 = +270度
+  }
+
+  private turnRight() {
+    this.playerDir = (this.playerDir + 1) % 4; // +90度
+  }
+
+  private getAngle(): number {
+    // 0=東(0), 1=南(π/2), 2=西(π), 3=北(3π/2)
+    return (this.playerDir * Math.PI) / 2;
+  }
+
+  private canMoveTo(x: number, y: number): boolean {
+    if (y < 0 || y >= this.maze.length || x < 0 || x >= this.maze[0].length) {
+      return false;
+    }
+    return this.maze[y][x] !== 1; // 壁でなければ移動可能
+  }
+
+  private checkGoal() {
+    if (this.maze[this.playerY][this.playerX] === 2) {
+      this.showGoalMessage();
     }
   }
 
@@ -139,8 +189,8 @@ export default class MazeScene extends Phaser.Scene {
 
     this.signs.forEach((message, key) => {
       const [x, y] = key.split(',').map(Number);
-      const dx = x + 0.5 - this.playerX;
-      const dy = y + 0.5 - this.playerY;
+      const dx = x - this.playerX;
+      const dy = y - this.playerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       if (distance < this.signDisplayDistance) {
@@ -170,13 +220,17 @@ export default class MazeScene extends Phaser.Scene {
     this.graphics.fillStyle(0x4a3c28, 1); // 茶色の地面
     this.graphics.fillRect(0, height / 2, width, height / 2);
 
+    const playerAngle = this.getAngle();
+    const playerPosX = this.playerX + 0.5; // グリッドの中心
+    const playerPosY = this.playerY + 0.5; // グリッドの中心
+
     // 看板の描画用データを収集
     const signsToDraw: Array<{ angle: number; distance: number; message: string }> = [];
 
     this.signs.forEach((message, key) => {
       const [sx, sy] = key.split(',').map(Number);
-      const dx = sx + 0.5 - this.playerX;
-      const dy = sy + 0.5 - this.playerY;
+      const dx = sx + 0.5 - playerPosX;
+      const dy = sy + 0.5 - playerPosY;
       const distance = Math.sqrt(dx * dx + dy * dy);
       const angle = Math.atan2(dy, dx);
 
@@ -187,11 +241,11 @@ export default class MazeScene extends Phaser.Scene {
 
     // レイキャスティング
     for (let i = 0; i < this.NUM_RAYS; i++) {
-      const rayAngle = this.playerAngle - this.FOV / 2 + (this.FOV * i) / this.NUM_RAYS;
-      const { distance, hitSide } = this.castRay(rayAngle);
+      const rayAngle = playerAngle - this.FOV / 2 + (this.FOV * i) / this.NUM_RAYS;
+      const { distance, hitSide } = this.castRay(rayAngle, playerPosX, playerPosY);
 
       // 魚眼補正
-      const correctedDistance = distance * Math.cos(rayAngle - this.playerAngle);
+      const correctedDistance = distance * Math.cos(rayAngle - playerAngle);
 
       // 壁の高さ計算
       const wallHeight = correctedDistance > 0 ? (height / correctedDistance) * 0.5 : height;
@@ -222,7 +276,7 @@ export default class MazeScene extends Phaser.Scene {
 
     // 看板を描画（壁の手前に表示）
     signsToDraw.forEach((sign) => {
-      const angleDiff = sign.angle - this.playerAngle;
+      const angleDiff = sign.angle - playerAngle;
       const normalizedAngle = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
 
       // FOV内にあるかチェック
@@ -243,12 +297,8 @@ export default class MazeScene extends Phaser.Scene {
         this.graphics.lineStyle(3, 0x000000, 1);
         this.graphics.strokeRect(screenX, signTop, signWidth, signHeight);
 
-        // 文字サイズ調整（距離に応じて）
-        const fontSize = Math.max(8, Math.floor(signHeight / 3));
-        const textColor = 0xFF0000;
-
         // 簡易的なテキスト描画（"！"マーク）
-        this.graphics.fillStyle(textColor, 1);
+        this.graphics.fillStyle(0xFF0000, 1);
         const exclamationWidth = signWidth * 0.3;
         const exclamationHeight = signHeight * 0.5;
         const exclamationX = screenX + signWidth / 2 - exclamationWidth / 2;
@@ -270,12 +320,16 @@ export default class MazeScene extends Phaser.Scene {
     });
   }
 
-  private castRay(angle: number): { distance: number; hitSide: 'horizontal' | 'vertical' } {
+  private castRay(
+    angle: number,
+    playerX: number,
+    playerY: number
+  ): { distance: number; hitSide: 'horizontal' | 'vertical' } {
     const rayDirX = Math.cos(angle);
     const rayDirY = Math.sin(angle);
 
-    let mapX = Math.floor(this.playerX);
-    let mapY = Math.floor(this.playerY);
+    let mapX = Math.floor(playerX);
+    let mapY = Math.floor(playerY);
 
     const deltaDistX = Math.abs(1 / rayDirX);
     const deltaDistY = Math.abs(1 / rayDirY);
@@ -287,18 +341,18 @@ export default class MazeScene extends Phaser.Scene {
 
     if (rayDirX < 0) {
       stepX = -1;
-      sideDistX = (this.playerX - mapX) * deltaDistX;
+      sideDistX = (playerX - mapX) * deltaDistX;
     } else {
       stepX = 1;
-      sideDistX = (mapX + 1.0 - this.playerX) * deltaDistX;
+      sideDistX = (mapX + 1.0 - playerX) * deltaDistX;
     }
 
     if (rayDirY < 0) {
       stepY = -1;
-      sideDistY = (this.playerY - mapY) * deltaDistY;
+      sideDistY = (playerY - mapY) * deltaDistY;
     } else {
       stepY = 1;
-      sideDistY = (mapY + 1.0 - this.playerY) * deltaDistY;
+      sideDistY = (mapY + 1.0 - playerY) * deltaDistY;
     }
 
     let hit = false;
@@ -326,9 +380,9 @@ export default class MazeScene extends Phaser.Scene {
 
     let distance: number;
     if (side === 'vertical') {
-      distance = Math.abs((mapX - this.playerX + (1 - stepX) / 2) / rayDirX);
+      distance = Math.abs((mapX - playerX + (1 - stepX) / 2) / rayDirX);
     } else {
-      distance = Math.abs((mapY - this.playerY + (1 - stepY) / 2) / rayDirY);
+      distance = Math.abs((mapY - playerY + (1 - stepY) / 2) / rayDirY);
     }
 
     return { distance, hitSide: side };
@@ -346,7 +400,7 @@ export default class MazeScene extends Phaser.Scene {
     this.minimapGraphics.fillStyle(0x000000, 0.5);
     this.minimapGraphics.fillRect(minimapX - 5, minimapY - 5, minimapSize + 10, minimapSize + 10);
 
-    // 迷路の描画
+    // 迷路の描画（常に北が上）
     for (let y = 0; y < this.maze.length; y++) {
       for (let x = 0; x < this.maze[y].length; x++) {
         if (this.maze[y][x] === 1) {
@@ -367,16 +421,17 @@ export default class MazeScene extends Phaser.Scene {
       }
     }
 
-    // プレイヤーの描画
-    const playerScreenX = minimapX + this.playerX * cellSize;
-    const playerScreenY = minimapY + this.playerY * cellSize;
+    // プレイヤーの描画（グリッド中央）
+    const playerScreenX = minimapX + (this.playerX + 0.5) * cellSize;
+    const playerScreenY = minimapY + (this.playerY + 0.5) * cellSize;
     this.minimapGraphics.fillStyle(0xFF0000, 1);
     this.minimapGraphics.fillCircle(playerScreenX, playerScreenY, cellSize / 2);
 
-    // プレイヤーの向き
+    // プレイヤーの向き（常に北が上の座標系）
+    const playerAngle = this.getAngle();
     const dirLength = cellSize;
-    const dirEndX = playerScreenX + Math.cos(this.playerAngle) * dirLength;
-    const dirEndY = playerScreenY + Math.sin(this.playerAngle) * dirLength;
+    const dirEndX = playerScreenX + Math.cos(playerAngle) * dirLength;
+    const dirEndY = playerScreenY + Math.sin(playerAngle) * dirLength;
     this.minimapGraphics.lineStyle(2, 0xFF0000, 1);
     this.minimapGraphics.lineBetween(playerScreenX, playerScreenY, dirEndX, dirEndY);
   }
