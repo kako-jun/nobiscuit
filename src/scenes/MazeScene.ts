@@ -38,6 +38,7 @@ export default class MazeScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd: any = {};
   private spaceKey!: Phaser.Input.Keyboard.Key;
+  private lKey!: Phaser.Input.Keyboard.Key;
 
   // キーリピート防止
   private lastKeyPressTime: number = 0;
@@ -46,6 +47,9 @@ export default class MazeScene extends Phaser.Scene {
   // 看板表示状態
   private currentSignMessage: string = '';
   private signDisplayDistance: number = 1.5; // 看板が表示される距離
+
+  // 左利きモード
+  private leftHandedMode: boolean = false;
 
   constructor() {
     super({ key: 'MazeScene' });
@@ -92,7 +96,7 @@ export default class MazeScene extends Phaser.Scene {
       10,
       this.getModeText(),
       {
-        fontSize: '20px',
+        fontSize: '18px',
         color: '#FFFFFF',
         backgroundColor: '#000000',
         padding: { x: 10, y: 5 },
@@ -108,6 +112,7 @@ export default class MazeScene extends Phaser.Scene {
       right: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.lKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.L);
 
     // タッチ操作エリアを4分割
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -139,12 +144,24 @@ export default class MazeScene extends Phaser.Scene {
         this.moveBackward();
       }
 
-      if (pointer.x < centerX) {
-        // 左半分：左回転
-        this.turnLeft();
+      // 左利きモードでは左右を反転
+      const isLeftSide = pointer.x < centerX;
+      if (this.leftHandedMode) {
+        if (isLeftSide) {
+          // 左半分：右回転（左利きモード）
+          this.turnRight();
+        } else {
+          // 右半分：左回転（左利きモード）
+          this.turnLeft();
+        }
       } else {
-        // 右半分：右回転
-        this.turnRight();
+        if (isLeftSide) {
+          // 左半分：左回転（通常モード）
+          this.turnLeft();
+        } else {
+          // 右半分：右回転（通常モード）
+          this.turnRight();
+        }
       }
     });
   }
@@ -161,6 +178,12 @@ export default class MazeScene extends Phaser.Scene {
     // モード切り替え
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
       this.toggleSmoothMovement();
+      return;
+    }
+
+    // 左利きモード切り替え
+    if (Phaser.Input.Keyboard.JustDown(this.lKey)) {
+      this.toggleLeftHandedMode();
       return;
     }
 
@@ -194,11 +217,32 @@ export default class MazeScene extends Phaser.Scene {
 
   private toggleSmoothMovement() {
     this.smoothMovement = !this.smoothMovement;
+    this.updateModeText();
+  }
+
+  private toggleLeftHandedMode() {
+    this.leftHandedMode = !this.leftHandedMode;
+    this.updateModeText();
+    this.updateUIPositions();
+  }
+
+  private updateModeText() {
     this.modeText.setText(this.getModeText());
   }
 
   private getModeText(): string {
-    return this.smoothMovement ? '移動: スムーズ (Space)' : '移動: グリッド (Space)';
+    const moveMode = this.smoothMovement ? 'スムーズ' : 'グリッド';
+    const handMode = this.leftHandedMode ? '左利き' : '右利き';
+    return `${moveMode} | ${handMode}\n(Space/L)`;
+  }
+
+  private updateUIPositions() {
+    // モード表示テキストの位置を更新
+    if (this.leftHandedMode) {
+      this.modeText.setPosition(this.scale.width - this.modeText.width - 10, 10);
+    } else {
+      this.modeText.setPosition(10, 10);
+    }
   }
 
   private updateMovement(delta: number) {
@@ -550,25 +594,33 @@ export default class MazeScene extends Phaser.Scene {
     this.minimapGraphics.clear();
 
     const minimapSize = Math.min(this.scale.width, this.scale.height) * 0.25;
-    const minimapX = this.scale.width - minimapSize - 10;
+
+    // 左利きモードでは右下、通常モードでは左下に配置
+    const minimapX = this.leftHandedMode
+      ? this.scale.width - minimapSize - 10
+      : 10;
     const minimapY = this.scale.height - minimapSize - 10;
     const cellSize = minimapSize / Math.max(this.maze.length, this.maze[0].length);
 
-    // 半透明背景
-    this.minimapGraphics.fillStyle(0x000000, 0.5);
+    // 半透明水色背景
+    this.minimapGraphics.fillStyle(0x87CEEB, 0.3);
     this.minimapGraphics.fillRect(minimapX - 5, minimapY - 5, minimapSize + 10, minimapSize + 10);
+
+    // 枠線（水色）
+    this.minimapGraphics.lineStyle(2, 0x87CEEB, 0.5);
+    this.minimapGraphics.strokeRect(minimapX - 5, minimapY - 5, minimapSize + 10, minimapSize + 10);
 
     // 迷路の描画（常に北が上）
     for (let y = 0; y < this.maze.length; y++) {
       for (let x = 0; x < this.maze[y].length; x++) {
         if (this.maze[y][x] === 1) {
-          this.minimapGraphics.fillStyle(0x228B22, 0.8); // 壁は緑
+          this.minimapGraphics.fillStyle(0x006400, 0.8); // 壁は濃い緑
         } else if (this.maze[y][x] === 2) {
-          this.minimapGraphics.fillStyle(0xFFD700, 0.8); // ゴールは金色
+          this.minimapGraphics.fillStyle(0xFFD700, 0.9); // ゴールは金色
         } else if (this.maze[y][x] === 3) {
-          this.minimapGraphics.fillStyle(0xFF4444, 0.8); // 看板は赤
+          this.minimapGraphics.fillStyle(0xFF6666, 0.8); // 看板は赤
         } else {
-          this.minimapGraphics.fillStyle(0xFFFFFF, 0.3); // 通路は白
+          this.minimapGraphics.fillStyle(0xADD8E6, 0.4); // 通路は薄い水色
         }
         this.minimapGraphics.fillRect(
           minimapX + x * cellSize,
@@ -582,14 +634,14 @@ export default class MazeScene extends Phaser.Scene {
     // プレイヤーの描画（補間された位置を使用）
     const playerScreenX = minimapX + this.currentPosX * cellSize;
     const playerScreenY = minimapY + this.currentPosY * cellSize;
-    this.minimapGraphics.fillStyle(0xFF0000, 1);
+    this.minimapGraphics.fillStyle(0xFFFFFF, 1); // プレイヤーは白
     this.minimapGraphics.fillCircle(playerScreenX, playerScreenY, cellSize / 2);
 
     // プレイヤーの向き（常に北が上の座標系、補間された角度を使用）
     const dirLength = cellSize;
     const dirEndX = playerScreenX + Math.cos(this.currentAngle) * dirLength;
     const dirEndY = playerScreenY + Math.sin(this.currentAngle) * dirLength;
-    this.minimapGraphics.lineStyle(2, 0xFF0000, 1);
+    this.minimapGraphics.lineStyle(3, 0x00BFFF, 1); // 向きは明るい水色
     this.minimapGraphics.lineBetween(playerScreenX, playerScreenY, dirEndX, dirEndY);
   }
 
