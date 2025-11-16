@@ -1,22 +1,10 @@
 import Phaser from 'phaser';
+import { MazeGenerator } from '../utils/MazeGenerator';
 
 export default class MazeScene extends Phaser.Scene {
-  // 迷路データ (1=壁, 0=通路, 2=ゴール)
-  private maze: number[][] = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1],
-    [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1],
-    [1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1],
-    [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1],
-    [1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1],
-    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-    [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-    [1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  ];
+  // 迷路データ (1=壁, 0=通路, 2=ゴール, 3=看板)
+  private maze: number[][] = [];
+  private signs: Map<string, string> = new Map();
 
   // プレイヤー位置と向き
   private playerX: number = 1.5;
@@ -31,18 +19,46 @@ export default class MazeScene extends Phaser.Scene {
   // グラフィックス
   private graphics!: Phaser.GameObjects.Graphics;
   private minimapGraphics!: Phaser.GameObjects.Graphics;
+  private signText!: Phaser.GameObjects.Text;
 
   // 入力
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd: any = {};
+
+  // 看板表示状態
+  private currentSignMessage: string = '';
+  private signDisplayDistance: number = 1.5; // 看板が表示される距離
 
   constructor() {
     super({ key: 'MazeScene' });
   }
 
   create() {
+    // 迷路を生成
+    const generator = new MazeGenerator(16, 13);
+    const result = generator.generate();
+    this.maze = result.maze;
+    this.signs = result.signs;
+
     this.graphics = this.add.graphics();
     this.minimapGraphics = this.add.graphics();
+
+    // 看板メッセージ用テキスト
+    this.signText = this.add.text(
+      this.scale.width / 2,
+      this.scale.height - 100,
+      '',
+      {
+        fontSize: '32px',
+        color: '#FF4444',
+        backgroundColor: '#000000',
+        padding: { x: 20, y: 10 },
+        stroke: '#FFFFFF',
+        strokeThickness: 2,
+      }
+    );
+    this.signText.setOrigin(0.5);
+    this.signText.setVisible(false);
 
     // キーボード入力
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -53,7 +69,7 @@ export default class MazeScene extends Phaser.Scene {
       right: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
 
-    // タッチ操作（簡易実装：後で改善）
+    // タッチ操作
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const centerX = this.scale.width / 2;
       const centerY = this.scale.height / 2;
@@ -75,6 +91,7 @@ export default class MazeScene extends Phaser.Scene {
 
   update(time: number, delta: number) {
     this.handleInput(delta);
+    this.checkNearbySign();
     this.render3DView();
     this.renderMinimap();
   }
@@ -116,6 +133,30 @@ export default class MazeScene extends Phaser.Scene {
     }
   }
 
+  private checkNearbySign() {
+    // プレイヤーの近くに看板があるかチェック
+    let foundSign = false;
+
+    this.signs.forEach((message, key) => {
+      const [x, y] = key.split(',').map(Number);
+      const dx = x + 0.5 - this.playerX;
+      const dy = y + 0.5 - this.playerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < this.signDisplayDistance) {
+        this.currentSignMessage = message;
+        this.signText.setText(message);
+        this.signText.setVisible(true);
+        foundSign = true;
+      }
+    });
+
+    if (!foundSign) {
+      this.signText.setVisible(false);
+      this.currentSignMessage = '';
+    }
+  }
+
   private render3DView() {
     this.graphics.clear();
 
@@ -128,6 +169,21 @@ export default class MazeScene extends Phaser.Scene {
     this.graphics.fillRect(0, 0, width, height / 2);
     this.graphics.fillStyle(0x4a3c28, 1); // 茶色の地面
     this.graphics.fillRect(0, height / 2, width, height / 2);
+
+    // 看板の描画用データを収集
+    const signsToDraw: Array<{ angle: number; distance: number; message: string }> = [];
+
+    this.signs.forEach((message, key) => {
+      const [sx, sy] = key.split(',').map(Number);
+      const dx = sx + 0.5 - this.playerX;
+      const dy = sy + 0.5 - this.playerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx);
+
+      if (distance < this.MAX_DEPTH) {
+        signsToDraw.push({ angle, distance, message });
+      }
+    });
 
     // レイキャスティング
     for (let i = 0; i < this.NUM_RAYS; i++) {
@@ -163,6 +219,55 @@ export default class MazeScene extends Phaser.Scene {
       this.graphics.fillStyle(color, 1);
       this.graphics.fillRect(i * stripWidth, wallTop, stripWidth + 1, wallHeight);
     }
+
+    // 看板を描画（壁の手前に表示）
+    signsToDraw.forEach((sign) => {
+      const angleDiff = sign.angle - this.playerAngle;
+      const normalizedAngle = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+
+      // FOV内にあるかチェック
+      if (Math.abs(normalizedAngle) < this.FOV / 2) {
+        const correctedDistance = sign.distance * Math.cos(normalizedAngle);
+        const signHeight = correctedDistance > 0 ? (height / correctedDistance) * 0.3 : height * 0.3;
+        const signWidth = signHeight * 1.5;
+        const signTop = (height - signHeight) / 2;
+
+        // 画面上のX位置を計算
+        const screenX = ((normalizedAngle + this.FOV / 2) / this.FOV) * width - signWidth / 2;
+
+        // 看板の背景（茶色の板）
+        this.graphics.fillStyle(0x8B4513, 0.9);
+        this.graphics.fillRect(screenX, signTop, signWidth, signHeight);
+
+        // 看板の枠
+        this.graphics.lineStyle(3, 0x000000, 1);
+        this.graphics.strokeRect(screenX, signTop, signWidth, signHeight);
+
+        // 文字サイズ調整（距離に応じて）
+        const fontSize = Math.max(8, Math.floor(signHeight / 3));
+        const textColor = 0xFF0000;
+
+        // 簡易的なテキスト描画（"！"マーク）
+        this.graphics.fillStyle(textColor, 1);
+        const exclamationWidth = signWidth * 0.3;
+        const exclamationHeight = signHeight * 0.5;
+        const exclamationX = screenX + signWidth / 2 - exclamationWidth / 2;
+        const exclamationY = signTop + signHeight * 0.2;
+
+        // ビックリマーク
+        this.graphics.fillRect(
+          exclamationX,
+          exclamationY,
+          exclamationWidth,
+          exclamationHeight * 0.7
+        );
+        this.graphics.fillCircle(
+          exclamationX + exclamationWidth / 2,
+          exclamationY + exclamationHeight,
+          exclamationWidth / 2
+        );
+      }
+    });
   }
 
   private castRay(angle: number): { distance: number; hitSide: 'horizontal' | 'vertical' } {
@@ -248,6 +353,8 @@ export default class MazeScene extends Phaser.Scene {
           this.minimapGraphics.fillStyle(0x228B22, 0.8); // 壁は緑
         } else if (this.maze[y][x] === 2) {
           this.minimapGraphics.fillStyle(0xFFD700, 0.8); // ゴールは金色
+        } else if (this.maze[y][x] === 3) {
+          this.minimapGraphics.fillStyle(0xFF4444, 0.8); // 看板は赤
         } else {
           this.minimapGraphics.fillStyle(0xFFFFFF, 0.3); // 通路は白
         }
