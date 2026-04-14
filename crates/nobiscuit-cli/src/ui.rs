@@ -1,1 +1,126 @@
-// Future: HUD rendering (hunger gauge, text overlays)
+use nobiscuit_engine::framebuffer::{Color, Framebuffer};
+
+const BAR_WIDTH: usize = 20;
+const BAR_HEIGHT: usize = 4;
+const BAR_MARGIN: usize = 4;
+
+/// Render hunger bar at top-left of framebuffer
+pub fn render_hunger_bar(fb: &mut Framebuffer, hunger: f64) {
+    let x0 = BAR_MARGIN;
+    let y0 = BAR_MARGIN;
+
+    // Background (dark gray)
+    let bg = Color::rgb(40, 40, 40);
+    for y in y0..y0 + BAR_HEIGHT {
+        for x in x0..x0 + BAR_WIDTH {
+            fb.set_pixel(x, y, bg);
+        }
+    }
+
+    // Fill (green → yellow → red based on hunger level)
+    let fill_width = (hunger.clamp(0.0, 1.0) * BAR_WIDTH as f64) as usize;
+    let fill_color = if hunger > 0.6 {
+        Color::rgb(80, 200, 80) // green
+    } else if hunger > 0.3 {
+        Color::rgb(220, 200, 40) // yellow
+    } else {
+        Color::rgb(220, 50, 50) // red
+    };
+
+    for y in y0..y0 + BAR_HEIGHT {
+        for x in x0..x0 + fill_width {
+            fb.set_pixel(x, y, fill_color);
+        }
+    }
+
+    // Border (white outline)
+    let border = Color::rgb(180, 180, 180);
+    for x in x0..x0 + BAR_WIDTH {
+        fb.set_pixel(x, y0, border);
+        fb.set_pixel(x, y0 + BAR_HEIGHT - 1, border);
+    }
+    for y in y0..y0 + BAR_HEIGHT {
+        fb.set_pixel(x0, y, border);
+        fb.set_pixel(x0 + BAR_WIDTH - 1, y, border);
+    }
+}
+
+/// Render a text message centered near bottom of framebuffer
+/// Each character is rendered as a 3x5 pixel block
+pub fn render_message(fb: &mut Framebuffer, text: &str, color: Color) {
+    let char_w = 4; // 3 pixels + 1 gap
+    let char_h = 6; // 5 pixels + 1 gap
+    let total_w = text.len() * char_w;
+    let x0 = fb.width().saturating_sub(total_w) / 2;
+    let y0 = fb.height().saturating_sub(char_h + 8);
+
+    // Background strip
+    let bg = Color::rgb(0, 0, 0);
+    for y in y0.saturating_sub(2)..=(y0 + char_h).min(fb.height() - 1) {
+        for x in x0.saturating_sub(4)..(x0 + total_w + 4).min(fb.width()) {
+            fb.set_pixel(x, y, bg);
+        }
+    }
+
+    // Simple 3x5 bitmap font for basic ASCII
+    for (ci, ch) in text.chars().enumerate() {
+        let bitmap = char_bitmap(ch);
+        let cx = x0 + ci * char_w;
+        for (row, bits) in bitmap.iter().enumerate() {
+            for col in 0..3 {
+                if bits & (1 << (2 - col)) != 0 {
+                    fb.set_pixel(cx + col, y0 + row, color);
+                }
+            }
+        }
+    }
+}
+
+/// 3x5 bitmap font — returns 5 rows, each row is 3 bits (MSB = left)
+fn char_bitmap(c: char) -> [u8; 5] {
+    match c.to_ascii_uppercase() {
+        'A' => [0b010, 0b101, 0b111, 0b101, 0b101],
+        'B' => [0b110, 0b101, 0b110, 0b101, 0b110],
+        'C' => [0b011, 0b100, 0b100, 0b100, 0b011],
+        'D' => [0b110, 0b101, 0b101, 0b101, 0b110],
+        'E' => [0b111, 0b100, 0b110, 0b100, 0b111],
+        'F' => [0b111, 0b100, 0b110, 0b100, 0b100],
+        'G' => [0b011, 0b100, 0b101, 0b101, 0b011],
+        'H' => [0b101, 0b101, 0b111, 0b101, 0b101],
+        'I' => [0b111, 0b010, 0b010, 0b010, 0b111],
+        'J' => [0b001, 0b001, 0b001, 0b101, 0b010],
+        'K' => [0b101, 0b110, 0b100, 0b110, 0b101],
+        'L' => [0b100, 0b100, 0b100, 0b100, 0b111],
+        'M' => [0b101, 0b111, 0b111, 0b101, 0b101],
+        'N' => [0b101, 0b111, 0b111, 0b101, 0b101],
+        'O' => [0b010, 0b101, 0b101, 0b101, 0b010],
+        'P' => [0b110, 0b101, 0b110, 0b100, 0b100],
+        'Q' => [0b010, 0b101, 0b101, 0b110, 0b011],
+        'R' => [0b110, 0b101, 0b110, 0b101, 0b101],
+        'S' => [0b011, 0b100, 0b010, 0b001, 0b110],
+        'T' => [0b111, 0b010, 0b010, 0b010, 0b010],
+        'U' => [0b101, 0b101, 0b101, 0b101, 0b010],
+        'V' => [0b101, 0b101, 0b101, 0b010, 0b010],
+        'W' => [0b101, 0b101, 0b111, 0b111, 0b101],
+        'X' => [0b101, 0b101, 0b010, 0b101, 0b101],
+        'Y' => [0b101, 0b101, 0b010, 0b010, 0b010],
+        'Z' => [0b111, 0b001, 0b010, 0b100, 0b111],
+        '0' => [0b010, 0b101, 0b101, 0b101, 0b010],
+        '1' => [0b010, 0b110, 0b010, 0b010, 0b111],
+        '2' => [0b110, 0b001, 0b010, 0b100, 0b111],
+        '3' => [0b110, 0b001, 0b010, 0b001, 0b110],
+        '4' => [0b101, 0b101, 0b111, 0b001, 0b001],
+        '5' => [0b111, 0b100, 0b110, 0b001, 0b110],
+        '6' => [0b011, 0b100, 0b110, 0b101, 0b010],
+        '7' => [0b111, 0b001, 0b010, 0b010, 0b010],
+        '8' => [0b010, 0b101, 0b010, 0b101, 0b010],
+        '9' => [0b010, 0b101, 0b011, 0b001, 0b110],
+        '.' => [0b000, 0b000, 0b000, 0b000, 0b010],
+        '!' => [0b010, 0b010, 0b010, 0b000, 0b010],
+        '?' => [0b010, 0b101, 0b010, 0b000, 0b010],
+        '*' => [0b000, 0b101, 0b010, 0b101, 0b000],
+        '-' => [0b000, 0b000, 0b111, 0b000, 0b000],
+        ' ' => [0b000, 0b000, 0b000, 0b000, 0b000],
+        _   => [0b111, 0b111, 0b111, 0b111, 0b111], // unknown = filled block
+    }
+}
