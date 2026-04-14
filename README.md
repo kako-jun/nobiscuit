@@ -1,61 +1,46 @@
-# Catch in the Corn - トウモロコシ畑からの脱出
+# nobiscuit
 
-ウィザードリィ風の3D迷路ゲーム。レイキャスティングによる疑似3D一人称視点で、トウモロコシ畑から脱出することが目的です。
+TUI raycasting 3D maze game. DOOM-style first-person perspective rendered entirely in the terminal using half-block characters and 24-bit true color.
 
-## 特徴
-
-- **疑似3D一人称視点**: レイキャスティングによるウィザードリィ風の描画
-- **スマホ対応**: ブラウザで動作、タッチ操作に対応
-- **ミニマップ**: 右下に2Dマップをオーバーレイ表示
-- **シンプル構成**: TypeScript + Phaser + Webpack
-
-## セットアップ
+## Install
 
 ```bash
-npm install
+cargo install --path crates/nobiscuit-cli
 ```
 
-## 開発サーバーの起動
+Or build from source:
 
 ```bash
-npm start
-# または
-npm run dev
+cargo build --release
+./target/release/nobiscuit
 ```
 
-ブラウザで http://localhost:8080 を開いてください。
+## Controls
 
-## ビルド
+| Key | Action |
+|---|---|
+| W / Up | Move forward |
+| S / Down | Move backward |
+| A / Left | Turn left |
+| D / Right | Turn right |
+| M | Toggle minimap |
+| Q / Esc | Quit |
 
-```bash
-npm run build
+## Requirements
+
+- Terminal with 24-bit true color support (most modern terminals)
+- Recommended size: 80x24 or larger
+
+## Architecture
+
+```
+crates/
+  nobiscuit-engine/  -- Reusable raycasting engine (zero dependencies)
+  nobiscuit-cli/     -- Game binary (crossterm + rand)
 ```
 
-`dist/` ディレクトリに本番用ファイルが生成されます。
+The engine renders to an abstract framebuffer. The CLI converts it to half-block characters (`▀`) where each terminal cell represents 2 vertical pixels using foreground/background colors.
 
-## 操作方法
+## License
 
-### キーボード
-- **W / ↑**: 前進
-- **S / ↓**: 後退
-- **A / ←**: 左回転
-- **D / →**: 右回転
-
-### タッチ操作
-- **画面上部タップ**: 前進
-- **画面下部タップ**: 後退
-- **画面左側タップ**: 左回転
-- **画面右側タップ**: 右回転
-
-## 技術スタック
-
-- TypeScript
-- Phaser 3
-- Webpack 5
-
-## ゲーム仕様
-
-- 迷路内を一人称視点で探索
-- トウモロコシ畑の壁が立ち並ぶ
-- ゴール（金色のマス）に到達すると脱出成功
-- ミニマップでリアルタイムに位置と向きを確認可能
+MIT

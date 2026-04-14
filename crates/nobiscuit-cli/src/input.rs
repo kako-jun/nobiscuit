@@ -1,0 +1,54 @@
+use std::time::Duration;
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+
+pub enum GameInput {
+    MoveForward,
+    MoveBackward,
+    TurnLeft,
+    TurnRight,
+    ToggleMinimap,
+    Quit,
+}
+
+pub fn poll_input(timeout: Duration) -> Option<GameInput> {
+    if event::poll(timeout).ok()? {
+        if let Event::Key(key) = event::read().ok()? {
+            return match key {
+                KeyEvent {
+                    code: KeyCode::Char('w') | KeyCode::Up,
+                    ..
+                } => Some(GameInput::MoveForward),
+                KeyEvent {
+                    code: KeyCode::Char('s') | KeyCode::Down,
+                    ..
+                } => Some(GameInput::MoveBackward),
+                KeyEvent {
+                    code: KeyCode::Char('a') | KeyCode::Left,
+                    ..
+                } => Some(GameInput::TurnLeft),
+                KeyEvent {
+                    code: KeyCode::Char('d') | KeyCode::Right,
+                    ..
+                } => Some(GameInput::TurnRight),
+                KeyEvent {
+                    code: KeyCode::Char('m'),
+                    ..
+                } => Some(GameInput::ToggleMinimap),
+                KeyEvent {
+                    code: KeyCode::Char('q'),
+                    ..
+                } => Some(GameInput::Quit),
+                KeyEvent {
+                    code: KeyCode::Char('c'),
+                    modifiers,
+                    ..
+                } if modifiers.contains(KeyModifiers::CONTROL) => Some(GameInput::Quit),
+                KeyEvent {
+                    code: KeyCode::Esc, ..
+                } => Some(GameInput::Quit),
+                _ => None,
+            };
+        }
+    }
+    None
+}

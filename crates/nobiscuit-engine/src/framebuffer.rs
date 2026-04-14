@@ -1,0 +1,62 @@
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Color {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
+
+impl Color {
+    pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
+        Self { r, g, b }
+    }
+
+    pub fn darken(self, factor: f64) -> Self {
+        Self {
+            r: (self.r as f64 * factor.clamp(0.0, 1.0)) as u8,
+            g: (self.g as f64 * factor.clamp(0.0, 1.0)) as u8,
+            b: (self.b as f64 * factor.clamp(0.0, 1.0)) as u8,
+        }
+    }
+}
+
+pub struct Framebuffer {
+    width: usize,
+    height: usize,
+    pixels: Vec<Color>,
+}
+
+impl Framebuffer {
+    pub fn new(width: usize, height: usize) -> Self {
+        Self {
+            width,
+            height,
+            pixels: vec![Color::default(); width * height],
+        }
+    }
+
+    pub fn clear(&mut self, color: Color) {
+        self.pixels.fill(color);
+    }
+
+    pub fn set_pixel(&mut self, x: usize, y: usize, color: Color) {
+        if x < self.width && y < self.height {
+            self.pixels[y * self.width + x] = color;
+        }
+    }
+
+    pub fn get_pixel(&self, x: usize, y: usize) -> Color {
+        if x < self.width && y < self.height {
+            self.pixels[y * self.width + x]
+        } else {
+            Color::default()
+        }
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+}
