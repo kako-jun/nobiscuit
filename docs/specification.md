@@ -104,9 +104,9 @@ const TILE_VOID: u8 = 6;
 | 3 | TILE_WINDOW | Yes | Glass pane with wooden frame |
 | 4 | TILE_STAIRS_UP | No | Stairs to upper floor |
 | 5 | TILE_STAIRS_DOWN | No | Stairs to lower floor |
-| 6 | TILE_VOID | Yes* | Non-existent cell (not wall, not floor). Rays return None (darkness) |
+| 6 | TILE_VOID | Yes* | Non-existent cell (not wall, not floor). Rays return `Some(RayHit{tile: TILE_VOID})` — no wall, floor, or ceiling drawn (column stays black) |
 
-\* VOID is solid for movement (impassable) but rays treat it as empty darkness — no wall is drawn.
+\* VOID is solid for movement (impassable). Raycasting returns a special hit that suppresses all rendering for that column.
 
 ## Sprite Types
 
