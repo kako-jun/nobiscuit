@@ -617,6 +617,11 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (GridMa
     // Place windows and shoji on some interior walls that border a corridor
     place_windows_and_shoji(&mut map, width, height, rng);
 
+    // Seal VOID boundaries: convert VOID cells adjacent to walkable cells into WALL.
+    // Without this, rays from corridors/rooms can reach VOID directly, causing
+    // black lines/areas to appear inside playable spaces.
+    seal_void_boundaries(&mut map, width, height);
+
     // Place goal on the largest island.
     // Uses reverse BFS discovery order (last-discovered node in BFS), which
     // tends to be far from the BFS start but is not guaranteed to be the
@@ -835,6 +840,51 @@ fn place_windows_and_shoji(map: &mut GridMap, width: usize, height: usize, rng: 
         } else {
             map.set(x, y, TILE_WINDOW);
         }
+    }
+}
+
+/// Seal VOID boundaries by converting VOID cells adjacent to non-solid cells into WALL.
+///
+/// After maze generation, some VOID cells (mask boundary) may directly border
+/// walkable cells (EMPTY, GOAL, stairs). This causes rays from playable areas
+/// to reach VOID, rendering black lines/areas inside rooms and corridors.
+/// Converting these boundary VOID cells to WALL prevents the visual artifact.
+/// Uses 8-directional neighbor checks (including diagonals) because DDA rays
+/// can step diagonally through cell corners, reaching a diagonally adjacent VOID.
+fn seal_void_boundaries(map: &mut GridMap, width: usize, height: usize) {
+    const DIRS8: [(i32, i32); 8] = [
+        (1, 0),
+        (-1, 0),
+        (0, 1),
+        (0, -1),
+        (1, 1),
+        (1, -1),
+        (-1, 1),
+        (-1, -1),
+    ];
+
+    // Collect cells to convert (avoid mutating while iterating)
+    let mut to_wall: Vec<(usize, usize)> = Vec::new();
+
+    // Outer ring is always WALL (never VOID), so skip edges
+    for y in 1..height - 1 {
+        for x in 1..width - 1 {
+            if map.get(x as i32, y as i32) != Some(TILE_VOID) {
+                continue;
+            }
+            let has_walkable_neighbor = DIRS8.iter().any(|&(dx, dy)| {
+                let nx = x as i32 + dx;
+                let ny = y as i32 + dy;
+                !map.is_solid(nx, ny)
+            });
+            if has_walkable_neighbor {
+                to_wall.push((x, y));
+            }
+        }
+    }
+
+    for (x, y) in to_wall {
+        map.set(x, y, TILE_WALL);
     }
 }
 
