@@ -24,9 +24,8 @@ crates/
         ├── maze.rs          # DFS maze generation (iterative backtracking)
         ├── player.rs        # Grid-based movement with animation interpolation
         ├── minimap.rs       # Semi-transparent 2D map overlay
-        ├── game.rs          # Game state (hunger, biscuit pickup, escape)
-        ├── scene.rs         # Scene management
-        └── ui.rs            # HUD (hunger bar, bitmap font messages)
+        ├── game.rs          # Game state, World (multi-floor), hunger, pickups, stairs
+        └── ui.rs            # HUD (hunger bar, floor indicator, bitmap font messages)
 ```
 
 ## Tech Stack

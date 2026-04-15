@@ -45,6 +45,54 @@ pub fn render_hunger_bar(fb: &mut Framebuffer, hunger: f64) {
     }
 }
 
+/// Render floor indicator below the hunger bar (e.g. "2F")
+pub fn render_floor_indicator(fb: &mut Framebuffer, current_floor: usize, total_floors: usize) {
+    let text = format!("{}F", current_floor);
+    let char_w = 4;
+    let x0 = BAR_MARGIN;
+    let y0 = BAR_MARGIN + BAR_HEIGHT + 2;
+
+    // Dim color for floor number, brighter if not ground floor
+    let color = if current_floor > 1 {
+        Color::rgb(200, 180, 100)
+    } else {
+        Color::rgb(140, 140, 140)
+    };
+
+    for (ci, ch) in text.chars().enumerate() {
+        let bitmap = char_bitmap(ch);
+        let cx = x0 + ci * char_w;
+        for (row, bits) in bitmap.iter().enumerate() {
+            for col in 0..3 {
+                if bits & (1 << (2 - col)) != 0 {
+                    let px = cx + col;
+                    let py = y0 + row;
+                    if px < fb.width() && py < fb.height() {
+                        fb.set_pixel(px, py, color);
+                    }
+                }
+            }
+        }
+    }
+
+    // Small dots showing total floors (bottom = 1F, top = top floor, like elevator)
+    let dot_x = x0 + text.len() * char_w + 2;
+    for f in 0..total_floors {
+        let dot_y = y0 + (total_floors - 1 - f) * 3;
+        let dot_color = if f + 1 == current_floor {
+            Color::rgb(255, 200, 50)
+        } else {
+            Color::rgb(80, 80, 80)
+        };
+        if dot_x < fb.width() && dot_y < fb.height() {
+            fb.set_pixel(dot_x, dot_y, dot_color);
+            if dot_x + 1 < fb.width() {
+                fb.set_pixel(dot_x + 1, dot_y, dot_color);
+            }
+        }
+    }
+}
+
 /// Render a text message centered near bottom of framebuffer
 /// Each character is rendered as a 3x5 pixel block
 pub fn render_message(fb: &mut Framebuffer, text: &str, color: Color) {
@@ -120,6 +168,7 @@ fn char_bitmap(c: char) -> [u8; 5] {
         '?' => [0b010, 0b101, 0b010, 0b000, 0b010],
         '*' => [0b000, 0b101, 0b010, 0b101, 0b000],
         '-' => [0b000, 0b000, 0b111, 0b000, 0b000],
+        '/' => [0b001, 0b001, 0b010, 0b100, 0b100],
         ' ' => [0b000, 0b000, 0b000, 0b000, 0b000],
         _   => [0b111, 0b111, 0b111, 0b111, 0b111], // unknown = filled block
     }

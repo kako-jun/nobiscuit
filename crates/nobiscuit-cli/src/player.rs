@@ -108,6 +108,15 @@ impl Player {
         }
     }
 
+    /// Teleport player to a new position (used for floor transitions)
+    pub fn teleport(&mut self, x: f64, y: f64) {
+        self.grid_x = x as i32;
+        self.grid_y = y as i32;
+        self.camera.x = x;
+        self.camera.y = y;
+        self.motion = Motion::Idle;
+    }
+
     pub fn update(&mut self, input: Option<&GameInput>, map: &dyn TileMap, dt: f64) {
         // Advance any in-progress animation
         match &mut self.motion {

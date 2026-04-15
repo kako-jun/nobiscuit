@@ -1,4 +1,5 @@
 use crate::framebuffer::{Color, Framebuffer};
+use crate::map::TILE_WINDOW;
 use crate::ray::{HitSide, RayHit};
 
 /// Compute textured wall color for a given point on the wall surface.
@@ -68,6 +69,55 @@ fn wall_texture(wall_x: f64, wall_y: f64, side: HitSide, brightness: f64, tile_h
     Color::rgb(r, g, b)
 }
 
+/// Compute window texture color.
+///
+/// Windows have a wooden frame around the edges and glass in the center.
+/// A cross-shaped mullion divides the glass into 4 panes.
+fn window_texture(wall_x: f64, wall_y: f64, side: HitSide, brightness: f64, tile_hash: u32) -> Color {
+    let frame_thickness = 0.12;
+    let mullion_half = 0.02;
+
+    let in_frame = wall_x < frame_thickness
+        || wall_x > 1.0 - frame_thickness
+        || wall_y < frame_thickness
+        || wall_y > 1.0 - frame_thickness;
+
+    let on_mullion = (wall_x - 0.5).abs() < mullion_half || (wall_y - 0.5).abs() < mullion_half;
+
+    if in_frame || on_mullion {
+        // Wooden frame / mullion — darker brown than walls
+        let base = match side {
+            HitSide::Vertical => (120.0, 80.0, 50.0),
+            HitSide::Horizontal => (105.0, 70.0, 42.0),
+        };
+        let r = (base.0 * brightness).clamp(0.0, 255.0) as u8;
+        let g = (base.1 * brightness).clamp(0.0, 255.0) as u8;
+        let b = (base.2 * brightness).clamp(0.0, 255.0) as u8;
+        Color::rgb(r, g, b)
+    } else {
+        // Glass pane — blueish tint with subtle variation
+        let hue_shift = ((tile_hash % 20) as f64 - 10.0) * 0.2;
+        let (base_r, base_g, base_b) = (140.0, 180.0, 220.0);
+        // Slight gradient: lighter toward center of each pane
+        let cx = if wall_x < 0.5 {
+            (wall_x - frame_thickness) / (0.5 - frame_thickness - mullion_half)
+        } else {
+            (1.0 - frame_thickness - wall_x) / (0.5 - frame_thickness - mullion_half)
+        };
+        let cy = if wall_y < 0.5 {
+            (wall_y - frame_thickness) / (0.5 - frame_thickness - mullion_half)
+        } else {
+            (1.0 - frame_thickness - wall_y) / (0.5 - frame_thickness - mullion_half)
+        };
+        let center_glow = 1.0 + (cx.clamp(0.0, 1.0) * cy.clamp(0.0, 1.0)) * 0.15;
+
+        let r = ((base_r + hue_shift) * brightness * center_glow).clamp(0.0, 255.0) as u8;
+        let g = ((base_g + hue_shift * 0.3) * brightness * center_glow).clamp(0.0, 255.0) as u8;
+        let b = ((base_b - hue_shift * 0.2) * brightness * center_glow).clamp(0.0, 255.0) as u8;
+        Color::rgb(r, g, b)
+    }
+}
+
 /// Simple hash for tile coordinates to give per-tile variation
 fn tile_hash(x: i32, y: i32) -> u32 {
     let mut h = (x as u32).wrapping_mul(374761393);
@@ -104,7 +154,11 @@ pub fn render_walls(fb: &mut Framebuffer, rays: &[Option<RayHit>], max_depth: f6
             } else {
                 0.5
             };
-            let color = wall_texture(hit.wall_x, wall_y, hit.side, brightness, th);
+            let color = if hit.tile == TILE_WINDOW {
+                window_texture(hit.wall_x, wall_y, hit.side, brightness, th)
+            } else {
+                wall_texture(hit.wall_x, wall_y, hit.side, brightness, th)
+            };
             fb.set_pixel(col, y, color);
         }
     }

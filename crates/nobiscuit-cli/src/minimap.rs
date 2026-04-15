@@ -1,5 +1,5 @@
 use nobiscuit_engine::framebuffer::{Color, Framebuffer};
-use nobiscuit_engine::map::{TileMap, TILE_GOAL, TILE_WALL};
+use nobiscuit_engine::map::{TileMap, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_WALL, TILE_WINDOW};
 
 const MINIMAP_SCALE: usize = 2;
 const MINIMAP_ALPHA: f64 = 0.4;
@@ -24,7 +24,10 @@ pub fn render_minimap(
             let tile = map.get(mx as i32, my as i32).unwrap_or(TILE_WALL);
             let color = match tile {
                 TILE_WALL => Color::rgb(40, 60, 40),
+                TILE_WINDOW => Color::rgb(80, 120, 180),
                 TILE_GOAL => Color::rgb(255, 215, 0),
+                TILE_STAIRS_UP => Color::rgb(200, 150, 50),
+                TILE_STAIRS_DOWN => Color::rgb(150, 100, 30),
                 _ => Color::rgb(100, 140, 100),
             };
 

@@ -51,8 +51,18 @@ cargo clippy                        # lint
 | game.rs | Game state (hunger, biscuit pickup, escape) |
 | ui.rs | HUD (hunger bar, bitmap font messages) |
 
+## Current features
+
+- Multi-floor maze (3 floors connected by stairs)
+- Window tiles (glass pane with wooden frame, distinct from walls)
+- Stair sprites (up/down arrows) with floor transition
+- Floor indicator HUD (e.g. "2F" with dot indicators)
+- Per-floor independent maze generation with biscuits
+
 ## Future work (Issue #2)
 
+- Movable walls/windows (home maze dynamic rearrangement)
+- Minimap visibility restriction (item-based, limited uses, etc.)
 - Infinite maze (chunk-based generation)
 - Text on walls (readable when close)
 - Title/ending scenes

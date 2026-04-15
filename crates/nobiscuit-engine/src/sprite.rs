@@ -54,6 +54,30 @@ fn get_sprite_art(sprite_type: u8) -> SpriteArt {
             ],
             height_scale: 0.25,
         },
+        // Stairs up — upward arrow
+        3 => SpriteArt {
+            pattern: &[
+                "..##..",
+                ".####.",
+                "######",
+                "..##..",
+                "..##..",
+                "..##..",
+            ],
+            height_scale: 0.3,
+        },
+        // Stairs down — downward arrow
+        4 => SpriteArt {
+            pattern: &[
+                "..##..",
+                "..##..",
+                "..##..",
+                "######",
+                ".####.",
+                "..##..",
+            ],
+            height_scale: 0.3,
+        },
         // Fallback — diamond
         _ => SpriteArt {
             pattern: &[

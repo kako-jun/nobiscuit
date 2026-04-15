@@ -3,6 +3,9 @@ pub type TileType = u8;
 pub const TILE_EMPTY: u8 = 0;
 pub const TILE_WALL: u8 = 1;
 pub const TILE_GOAL: u8 = 2;
+pub const TILE_WINDOW: u8 = 3;
+pub const TILE_STAIRS_UP: u8 = 4;
+pub const TILE_STAIRS_DOWN: u8 = 5;
 
 pub trait TileMap {
     fn width(&self) -> usize;
@@ -53,8 +56,10 @@ impl TileMap for GridMap {
 
     fn is_solid(&self, x: i32, y: i32) -> bool {
         match self.get(x, y) {
-            Some(TILE_EMPTY) | Some(TILE_GOAL) => false,
-            _ => true, // walls and out-of-bounds are solid
+            Some(TILE_EMPTY) | Some(TILE_GOAL) | Some(TILE_STAIRS_UP) | Some(TILE_STAIRS_DOWN) => {
+                false
+            }
+            _ => true, // walls, windows, and out-of-bounds are solid
         }
     }
 }
