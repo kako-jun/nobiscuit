@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 
 use nobiscuit_engine::floor;
 use nobiscuit_engine::framebuffer::{Color, Framebuffer};
+use nobiscuit_engine::map::TileMap;
 use nobiscuit_engine::renderer;
 use nobiscuit_engine::sprite;
 
@@ -64,6 +65,7 @@ fn main() {
     // Player starts at (1.5, 1.5) facing right on ground floor
     let mut player = Player::new(1.5, 1.5);
     let mut state = GameState::new();
+    state.init_visited(&world);
 
     let mut last_frame = Instant::now();
 
@@ -79,7 +81,7 @@ fn main() {
         match &input {
             Some(GameInput::Quit) => break,
             Some(GameInput::ToggleMinimap) => {
-                state.show_minimap = !state.show_minimap;
+                state.activate_minimap();
             }
             _ => {}
         }
@@ -87,6 +89,17 @@ fn main() {
         if state.is_alive && !state.escaped {
             // Update player
             player.update(input.as_ref(), world.current_map(), dt);
+
+            // Update fog of war
+            let map_w = world.current_map().width();
+            let map_h = world.current_map().height();
+            state.update_visited(
+                world.current_floor,
+                player.camera.x.max(0.0) as usize,
+                player.camera.y.max(0.0) as usize,
+                map_w,
+                map_h,
+            );
 
             // Update game state (hunger, pickups, stairs)
             state.update(&mut world, player.camera.x, player.camera.y, dt);
@@ -143,12 +156,24 @@ fn main() {
 
         // Minimap overlay
         if state.show_minimap {
+            let visited_floor = if state.debug_mode {
+                &[] as &[Vec<bool>]
+            } else {
+                state
+                    .visited
+                    .get(world.current_floor)
+                    .map(|v| v.as_slice())
+                    .unwrap_or(&[])
+            };
+            let reveal_all = state.debug_mode || state.minimap_reveal_all;
             minimap::render_minimap(
                 &mut fb,
                 current_map,
                 player.camera.x,
                 player.camera.y,
                 player.camera.angle,
+                visited_floor,
+                reveal_all,
             );
         }
 

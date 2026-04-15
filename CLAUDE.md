@@ -61,10 +61,9 @@ cargo clippy                        # lint
 - Stair sprites (up/down arrows) with floor transition
 - Floor indicator HUD (e.g. "2F" with dot indicators)
 - Per-floor independent maze generation with biscuits
+- Minimap visibility restriction: fog of war, timed display (M key: 3s with hunger cost, biscuit: 2s full reveal), debug mode via NOBISCUIT_DEBUG=1
 
 ## Future work
-
-- #6 Minimap visibility restriction (item-based, limited uses)
 - #7 Shoji (translucent window variant)
 - #8 Galagala opening sequence (difficulty selection + goal)
 - #9 Game over/clear presentation (fade, delay, retry)
