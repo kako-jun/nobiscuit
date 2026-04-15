@@ -21,7 +21,7 @@ crates/
         ├── main.rs          # Game loop (30fps: input → update → render → present)
         ├── terminal.rs      # Half-block ANSI renderer with delta flushing
         ├── input.rs         # Non-blocking crossterm key polling
-        ├── maze.rs          # DFS maze generation (iterative backtracking)
+        ├── maze.rs          # Mask-based irregular maze generation (per-island DFS)
         ├── player.rs        # Grid-based movement with animation interpolation
         ├── minimap.rs       # Semi-transparent 2D map overlay
         ├── game.rs          # Game state, World (multi-floor), hunger, pickups, stairs
@@ -77,6 +77,17 @@ pub trait TileMap {
     fn is_solid(&self, x: i32, y: i32) -> bool;
 }
 ```
+
+### Irregular Map Generation
+
+迷路は不定形マスクベースで生成される:
+
+1. **マスク生成**: 2-4 個のシード点から BFS でアメーバ状に拡張。全 DFS ノードの 40-70% を選択
+2. **VOID 設定**: マスク外の内部セルを `TILE_VOID` に設定（外周は壁のまま）
+3. **島検出**: マスク内の連結成分（島）を BFS で特定
+4. **島ごと DFS**: 各島で独立に迷路を生成。島間は同一階では移動不可
+5. **階段配置**: 各島に階段を配置し、異なる階の異なる島に遷移させることで迷子感を演出
+6. **レイキャスティング**: VOID に ray が到達すると `None` を返し、真っ暗に描画
 
 ### Sprite System
 

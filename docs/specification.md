@@ -69,6 +69,10 @@ trait TileMap {
 const TILE_EMPTY: u8 = 0;
 const TILE_WALL: u8 = 1;
 const TILE_GOAL: u8 = 2;
+const TILE_WINDOW: u8 = 3;
+const TILE_STAIRS_UP: u8 = 4;
+const TILE_STAIRS_DOWN: u8 = 5;
+const TILE_VOID: u8 = 6;
 ```
 
 ## Game Parameters
@@ -87,6 +91,8 @@ const TILE_GOAL: u8 = 2;
 | Pickup distance | 0.5 | World units to pick up item |
 | Minimap scale | 2 | Pixels per map tile |
 | Minimap alpha | 0.4 | Overlay transparency |
+| Mask coverage | 40-70% | Fraction of DFS nodes included in irregular mask |
+| Seed points | 2-4 | Number of BFS seed points for mask generation |
 
 ## Tile Types
 
@@ -95,6 +101,12 @@ const TILE_GOAL: u8 = 2;
 | 0 | TILE_EMPTY | No | Walkable floor |
 | 1 | TILE_WALL | Yes | Solid wall |
 | 2 | TILE_GOAL | No | Exit marker |
+| 3 | TILE_WINDOW | Yes | Glass pane with wooden frame |
+| 4 | TILE_STAIRS_UP | No | Stairs to upper floor |
+| 5 | TILE_STAIRS_DOWN | No | Stairs to lower floor |
+| 6 | TILE_VOID | Yes* | Non-existent cell (not wall, not floor). Rays return None (darkness) |
+
+\* VOID is solid for movement (impassable) but rays treat it as empty darkness — no wall is drawn.
 
 ## Sprite Types
 
@@ -102,6 +114,8 @@ const TILE_GOAL: u8 = 2;
 |---|---|---|---|---|
 | 1 | SPRITE_BISCUIT | Round cookie (8x7 AA) | 0.25 | Floor level |
 | 2 | SPRITE_GOAL | Sphere with highlight (8x7 AA) | 0.25 | Floating |
+| 3 | SPRITE_STAIRS_UP | Upward arrow (6x6 AA) | 0.3 | Floor level |
+| 4 | SPRITE_STAIRS_DOWN | Downward arrow (6x6 AA) | 0.3 | Floor level |
 
 ## Wall Texture Features
 
