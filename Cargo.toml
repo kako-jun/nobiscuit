@@ -7,7 +7,13 @@ version = "0.1.0"
 edition = "2021"
 authors = ["kako-jun"]
 license = "MIT"
+homepage = "https://github.com/kako-jun/nobiscuit"
 repository = "https://github.com/kako-jun/nobiscuit"
+readme = "README.md"
+keywords = ["game", "tui", "raycasting", "maze", "terminal"]
+categories = ["command-line-utilities", "games"]
+exclude = [".github/", "target/"]
+rust-version = "1.82.0"
 
 [workspace.dependencies]
 nobiscuit-engine = { version = "0.1.0", path = "crates/nobiscuit-engine" }

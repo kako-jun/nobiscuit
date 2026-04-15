@@ -1,9 +1,17 @@
 [package]
 name = "nobiscuit-cli"
+description = "TUI raycasting 3D maze game — DOOM-style first-person view in your terminal"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+exclude.workspace = true
+rust-version.workspace = true
 
 [[bin]]
 name = "nobiscuit"
