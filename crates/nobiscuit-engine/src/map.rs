@@ -11,6 +11,7 @@ pub const TILE_DOOR_FUSUMA: u8 = 7;
 pub const TILE_DOOR_KITCHEN: u8 = 8;
 pub const TILE_DOOR_TOILET: u8 = 9;
 pub const TILE_DOOR_GENKAN: u8 = 10;
+pub const TILE_SHOJI: u8 = 11;
 
 pub trait TileMap {
     fn width(&self) -> usize;

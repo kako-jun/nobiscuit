@@ -1,6 +1,7 @@
 use nobiscuit_engine::map::{
     GridMap, TileMap, TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET,
-    TILE_EMPTY, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL, TILE_WINDOW,
+    TILE_EMPTY, TILE_GOAL, TILE_SHOJI, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL,
+    TILE_WINDOW,
 };
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -755,7 +756,12 @@ fn place_windows(map: &mut GridMap, width: usize, height: usize, rng: &mut impl 
     candidates.shuffle(rng);
     let window_count = (candidates.len() / 7).max(3);
     for &(x, y) in candidates.iter().take(window_count) {
-        map.set(x, y, TILE_WINDOW);
+        // ~30% of window candidates become shoji, the rest stay as windows
+        if rng.gen_bool(0.3) {
+            map.set(x, y, TILE_SHOJI);
+        } else {
+            map.set(x, y, TILE_WINDOW);
+        }
     }
 }
 
