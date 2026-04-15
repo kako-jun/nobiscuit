@@ -2,6 +2,19 @@
 
 TUI raycasting 3D maze game. DOOM-style first-person perspective rendered entirely in the terminal using half-block characters and 24-bit true color.
 
+Inspired by Doraemon's "Home Maze" episode — wander through an endless house, eat biscuits to survive, find the exit.
+
+## Features
+
+- Wizardry-style grid movement with smooth animation
+- Procedural wall textures (wood grain, nageshi, baseboard)
+- Perspective-correct floor and ceiling rendering
+- Multi-floor maze (3 floors connected by stairs)
+- Window tiles with glass pane texture
+- Biscuit sprites with hunger system
+- Semi-transparent minimap overlay
+- Floor indicator HUD
+
 ## Install
 
 ```bash
