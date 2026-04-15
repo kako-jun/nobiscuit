@@ -1,4 +1,4 @@
-use crate::map::TileMap;
+use crate::map::{TileMap, TILE_VOID};
 use crate::math::Vec2f;
 
 #[derive(Debug, Clone, Copy)]
@@ -18,12 +18,7 @@ pub struct RayHit {
 }
 
 /// Cast a single ray using DDA algorithm
-pub fn cast_ray(
-    map: &dyn TileMap,
-    origin: Vec2f,
-    angle: f64,
-    max_depth: f64,
-) -> Option<RayHit> {
+pub fn cast_ray(map: &dyn TileMap, origin: Vec2f, angle: f64, max_depth: f64) -> Option<RayHit> {
     let ray_dir_x = angle.cos();
     let ray_dir_y = angle.sin();
 
@@ -69,17 +64,19 @@ pub fn cast_ray(
         }
 
         // Check bounds
-        if map_x < 0
-            || map_y < 0
-            || map_x >= map.width() as i32
-            || map_y >= map.height() as i32
-        {
+        if map_x < 0 || map_y < 0 || map_x >= map.width() as i32 || map_y >= map.height() as i32 {
             return None;
         }
 
         // Check if we hit a solid tile
         if map.is_solid(map_x, map_y) {
             let tile = map.get(map_x, map_y).unwrap_or(1);
+
+            // VOID tiles are solid (impassable) but invisible to rays.
+            // When a ray enters VOID, it sees nothing — return None (darkness).
+            if tile == TILE_VOID {
+                return None;
+            }
 
             // Compute perpendicular distance (avoids fisheye on its own,
             // but camera.rs applies additional fisheye correction)

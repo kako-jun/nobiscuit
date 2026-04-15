@@ -1,8 +1,7 @@
 use std::io::{self, BufWriter, Stdout, Write};
 
 use crossterm::{
-    cursor,
-    execute, queue,
+    cursor, execute, queue,
     style::{Color as CtColor, Print, SetBackgroundColor, SetForegroundColor},
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -102,11 +101,7 @@ impl TerminalRenderer {
     }
 
     pub fn cleanup(&mut self) {
-        let _ = execute!(
-            self.writer,
-            cursor::Show,
-            LeaveAlternateScreen
-        );
+        let _ = execute!(self.writer, cursor::Show, LeaveAlternateScreen);
         let _ = terminal::disable_raw_mode();
     }
 }

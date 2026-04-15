@@ -1,5 +1,5 @@
-use std::time::Duration;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use std::time::Duration;
 
 pub enum GameInput {
     MoveForward,

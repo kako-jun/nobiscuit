@@ -1,5 +1,7 @@
 use nobiscuit_engine::framebuffer::{Color, Framebuffer};
-use nobiscuit_engine::map::{TileMap, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_WALL, TILE_WINDOW};
+use nobiscuit_engine::map::{
+    TileMap, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL, TILE_WINDOW,
+};
 
 const MINIMAP_SCALE: usize = 2;
 const MINIMAP_ALPHA: f64 = 0.4;
@@ -22,6 +24,12 @@ pub fn render_minimap(
     for my in 0..map.height() {
         for mx in 0..map.width() {
             let tile = map.get(mx as i32, my as i32).unwrap_or(TILE_WALL);
+
+            // VOID tiles are not drawn on the minimap (stay black)
+            if tile == TILE_VOID {
+                continue;
+            }
+
             let color = match tile {
                 TILE_WALL => Color::rgb(40, 60, 40),
                 TILE_WINDOW => Color::rgb(80, 120, 180),

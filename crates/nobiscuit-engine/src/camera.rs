@@ -29,8 +29,7 @@ impl Camera {
 
         (0..num_rays)
             .map(|i| {
-                let ray_angle = self.angle - half_fov
-                    + self.fov * (i as f64) / (num_rays as f64);
+                let ray_angle = self.angle - half_fov + self.fov * (i as f64) / (num_rays as f64);
 
                 cast_ray(map, origin, ray_angle, max_depth)
             })

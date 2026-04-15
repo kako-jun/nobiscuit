@@ -31,62 +31,30 @@ fn get_sprite_art(sprite_type: u8) -> SpriteArt {
         // Biscuit — small round cookie shape, half wall height
         1 => SpriteArt {
             pattern: &[
-                "..####..",
-                ".######.",
-                "########",
-                "##.##.##",
-                "########",
-                ".######.",
-                "..####..",
+                "..####..", ".######.", "########", "##.##.##", "########", ".######.", "..####..",
             ],
             height_scale: 0.25,
         },
         // Goal — floating sphere
         2 => SpriteArt {
             pattern: &[
-                "..####..",
-                ".######.",
-                "###++###",
-                "###+.###",
-                "########",
-                ".######.",
-                "..####..",
+                "..####..", ".######.", "###++###", "###+.###", "########", ".######.", "..####..",
             ],
             height_scale: 0.25,
         },
         // Stairs up — upward arrow
         3 => SpriteArt {
-            pattern: &[
-                "..##..",
-                ".####.",
-                "######",
-                "..##..",
-                "..##..",
-                "..##..",
-            ],
+            pattern: &["..##..", ".####.", "######", "..##..", "..##..", "..##.."],
             height_scale: 0.3,
         },
         // Stairs down — downward arrow
         4 => SpriteArt {
-            pattern: &[
-                "..##..",
-                "..##..",
-                "..##..",
-                "######",
-                ".####.",
-                "..##..",
-            ],
+            pattern: &["..##..", "..##..", "..##..", "######", ".####.", "..##.."],
             height_scale: 0.3,
         },
         // Fallback — diamond
         _ => SpriteArt {
-            pattern: &[
-                "..##..",
-                ".####.",
-                "######",
-                ".####.",
-                "..##..",
-            ],
+            pattern: &["..##..", ".####.", "######", ".####.", "..##.."],
             height_scale: 0.25,
         },
     }
@@ -211,7 +179,11 @@ pub fn render_sprites(
                 let pat_row = (sy as f64 / sprite_h as f64 * pat_h as f64) as usize;
                 let pat_row = pat_row.min(pat_h - 1);
 
-                let ch = pat[pat_row].as_bytes().get(pat_col).copied().unwrap_or(b'.');
+                let ch = pat[pat_row]
+                    .as_bytes()
+                    .get(pat_col)
+                    .copied()
+                    .unwrap_or(b'.');
 
                 match ch {
                     b'#' => {

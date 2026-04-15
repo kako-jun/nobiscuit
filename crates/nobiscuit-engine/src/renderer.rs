@@ -73,7 +73,13 @@ fn wall_texture(wall_x: f64, wall_y: f64, side: HitSide, brightness: f64, tile_h
 ///
 /// Windows have a wooden frame around the edges and glass in the center.
 /// A cross-shaped mullion divides the glass into 4 panes.
-fn window_texture(wall_x: f64, wall_y: f64, side: HitSide, brightness: f64, tile_hash: u32) -> Color {
+fn window_texture(
+    wall_x: f64,
+    wall_y: f64,
+    side: HitSide,
+    brightness: f64,
+    tile_hash: u32,
+) -> Color {
     let frame_thickness = 0.12;
     let mullion_half = 0.02;
 

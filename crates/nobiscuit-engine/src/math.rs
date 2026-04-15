@@ -67,4 +67,3 @@ pub fn normalize_angle(a: f64) -> f64 {
     }
     a
 }
-

@@ -85,7 +85,8 @@ fn floor_tile_color(wx: f64, wy: f64, base: Color, brightness: f64) -> Color {
 
     // Grid lines at tile edges
     let grid_width = 0.04;
-    let on_grid = tx < grid_width || tx > (1.0 - grid_width) || ty < grid_width || ty > (1.0 - grid_width);
+    let on_grid =
+        tx < grid_width || tx > (1.0 - grid_width) || ty < grid_width || ty > (1.0 - grid_width);
 
     // Subtle inner plank lines (horizontal grain in each tile)
     let plank_line = (ty * 6.0).fract() < 0.08;
