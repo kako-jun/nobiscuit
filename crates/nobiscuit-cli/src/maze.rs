@@ -372,6 +372,7 @@ fn place_rooms(
 fn generate_corridors(
     map: &mut GridMap,
     island_nodes: &[(usize, usize)],
+    mask: &[bool],
     width: usize,
     height: usize,
     rng: &mut impl Rng,
@@ -394,6 +395,7 @@ fn generate_corridors(
     let (sx, sy) = island_nodes[start_idx];
 
     let mut corridor_node_indices: Vec<usize> = Vec::new();
+    let mut corridor_node_coords: Vec<(usize, usize)> = Vec::new();
     let mut is_corridor_node = vec![false; max_node_count(width, height)];
     let mut corridor_cells: Vec<(usize, usize)> = Vec::new();
 
@@ -401,6 +403,7 @@ fn generate_corridors(
     let si = node_index(sx, sy, node_cols);
     is_corridor_node[si] = true;
     corridor_node_indices.push(si);
+    corridor_node_coords.push((sx, sy));
     map.set(sx, sy, TILE_EMPTY);
     corridor_cells.push((sx, sy));
 
@@ -432,6 +435,7 @@ fn generate_corridors(
 
                     is_corridor_node[ni] = true;
                     corridor_node_indices.push(ni);
+                    corridor_node_coords.push((nux, nuy));
                     current = (nux, nuy);
                     moved = true;
                     stuck_count = 0;
@@ -446,14 +450,8 @@ fn generate_corridors(
                 break;
             }
             // Jump to a random existing corridor node and try from there
-            let jump_idx = rng.gen_range(0..corridor_node_indices.len());
-            // Find the node coordinates for this index
-            for &(x, y) in island_nodes {
-                if node_index(x, y, node_cols) == corridor_node_indices[jump_idx] {
-                    current = (x, y);
-                    break;
-                }
-            }
+            let jump_idx = rng.gen_range(0..corridor_node_coords.len());
+            current = corridor_node_coords[jump_idx];
         }
     }
 
@@ -467,7 +465,7 @@ fn generate_corridors(
                 let nux = nx as usize;
                 let nuy = ny as usize;
                 // Only widen into masked cells (not VOID)
-                if map.get(nx, ny) == Some(TILE_WALL) {
+                if mask[nuy * width + nux] && map.get(nx, ny) == Some(TILE_WALL) {
                     map.set(nux, nuy, TILE_EMPTY);
                     extra_cells.push((nux, nuy));
 
@@ -600,7 +598,7 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (GridMa
     let mut all_corridor_cells: Vec<(usize, usize)> = Vec::new();
     let mut island_corridor_indices: Vec<Vec<usize>> = Vec::new();
     for island in &islands {
-        let (cells, indices) = generate_corridors(&mut map, island, width, height, rng);
+        let (cells, indices) = generate_corridors(&mut map, island, &mask, width, height, rng);
         all_corridor_cells.extend(&cells);
         island_corridor_indices.push(indices);
     }
@@ -779,10 +777,10 @@ fn place_doors(map: &mut GridMap, rooms: &[Room], width: usize, height: usize, r
         let door_type = if is_genkan {
             TILE_DOOR_GENKAN
         } else if area >= 9 {
-            // 3x3 or 4x3
+            // Large rooms (area >= 9)
             TILE_DOOR_FUSUMA
         } else if area >= 6 {
-            // 3x2, 2x3
+            // Medium rooms (area >= 6)
             TILE_DOOR_KITCHEN
         } else {
             // 2x2
