@@ -12,6 +12,20 @@ const PLAYER_START: (usize, usize) = (1, 1);
 /// DFS neighbor directions (step by 2 on the node grid).
 const DFS_DIRS: [(i32, i32); 4] = [(2, 0), (-2, 0), (0, 2), (0, -2)];
 
+/// 4-directional neighbors (step by 1).
+const DIRS4: [(i32, i32); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+
+/// Maximum contiguous empty area allowed when removing a wall for widening.
+const MAX_OPEN_AREA: usize = 12;
+
+/// A placed room (interior coordinates in map space).
+struct Room {
+    x: usize, // left column of interior
+    y: usize, // top row of interior
+    w: usize, // interior width
+    h: usize, // interior height
+}
+
 /// Compute the flat index for a DFS node at odd coordinates (x, y).
 /// `node_cols` is `(map_width - 1) / 2`.
 fn node_index(x: usize, y: usize, node_cols: usize) -> usize {
@@ -222,6 +236,164 @@ fn find_islands(mask: &[bool], width: usize, height: usize) -> Vec<Vec<(usize, u
     islands
 }
 
+/// Place small rooms randomly within the masked area.
+///
+/// Rooms have interior sizes ranging from 2×2 to 4×3. They are placed so that
+/// all interior cells fall within the mask (not VOID) and do not overlap
+/// existing room interiors. Rooms may be adjacent with only a wall between them.
+fn place_rooms(
+    map: &mut GridMap,
+    mask: &[bool],
+    width: usize,
+    height: usize,
+    rng: &mut impl Rng,
+) -> Vec<Room> {
+    let mut rooms: Vec<Room> = Vec::new();
+    let max_attempts = 80;
+    // Room interior sizes: (w, h) from 2×2 to 4×3
+    let sizes: [(usize, usize); 5] = [(2, 2), (3, 2), (2, 3), (3, 3), (4, 3)];
+
+    for _ in 0..max_attempts {
+        let &(rw, rh) = sizes.choose(rng).unwrap();
+        // Interior must fit within border (1..width-1, 1..height-1)
+        if rw + 2 > width || rh + 2 > height {
+            continue;
+        }
+        let rx = rng.gen_range(1..width - 1 - rw + 1);
+        let ry = rng.gen_range(1..height - 1 - rh + 1);
+
+        // Check all interior cells are in mask
+        let mut fits = true;
+        'check_mask: for dy in 0..rh {
+            for dx in 0..rw {
+                if !mask[(ry + dy) * width + (rx + dx)] {
+                    fits = false;
+                    break 'check_mask;
+                }
+            }
+        }
+        if !fits {
+            continue;
+        }
+
+        // Check no overlap with existing room interiors
+        let mut overlaps = false;
+        'check_overlap: for room in &rooms {
+            // Check if the two room interiors overlap
+            if rx < room.x + room.w && rx + rw > room.x && ry < room.y + room.h && ry + rh > room.y
+            {
+                overlaps = true;
+                break 'check_overlap;
+            }
+        }
+        if overlaps {
+            continue;
+        }
+
+        // Place room: set all interior cells to EMPTY
+        for dy in 0..rh {
+            for dx in 0..rw {
+                map.set(rx + dx, ry + dy, TILE_EMPTY);
+            }
+        }
+
+        rooms.push(Room {
+            x: rx,
+            y: ry,
+            w: rw,
+            h: rh,
+        });
+    }
+
+    rooms
+}
+
+/// Measure the contiguous empty area reachable from (sx, sy) via flood fill.
+fn flood_fill_count(map: &GridMap, width: usize, height: usize, sx: usize, sy: usize) -> usize {
+    let mut visited = vec![false; width * height];
+    let mut queue = VecDeque::new();
+    visited[sy * width + sx] = true;
+    queue.push_back((sx, sy));
+    let mut count = 0;
+
+    while let Some((cx, cy)) = queue.pop_front() {
+        count += 1;
+        for &(dx, dy) in &DIRS4 {
+            let nx = cx as i32 + dx;
+            let ny = cy as i32 + dy;
+            if nx >= 0 && nx < width as i32 && ny >= 0 && ny < height as i32 {
+                let nux = nx as usize;
+                let nuy = ny as usize;
+                let idx = nuy * width + nux;
+                if !visited[idx] && map.get(nx, ny) == Some(TILE_EMPTY) {
+                    visited[idx] = true;
+                    queue.push_back((nux, nuy));
+                }
+            }
+        }
+    }
+
+    count
+}
+
+/// Widen some corridors by selectively removing walls.
+///
+/// Candidate walls are interior TILE_WALL cells adjacent to 2+ TILE_EMPTY cells.
+/// A subset of candidates is processed: each wall is tentatively removed and
+/// a flood fill checks whether the resulting open area exceeds MAX_OPEN_AREA.
+/// If it does, the wall is restored.
+fn widen_corridors(
+    map: &mut GridMap,
+    mask: &[bool],
+    width: usize,
+    height: usize,
+    rng: &mut impl Rng,
+) {
+    let mut candidates: Vec<(usize, usize)> = Vec::new();
+
+    for y in 1..height - 1 {
+        for x in 1..width - 1 {
+            if !mask[y * width + x] {
+                continue;
+            }
+            if map.get(x as i32, y as i32) != Some(TILE_WALL) {
+                continue;
+            }
+            // Count adjacent empty cells
+            let mut empty_neighbors = 0;
+            for &(dx, dy) in &DIRS4 {
+                if map.get(x as i32 + dx, y as i32 + dy) == Some(TILE_EMPTY) {
+                    empty_neighbors += 1;
+                }
+            }
+            if empty_neighbors >= 2 {
+                candidates.push((x, y));
+            }
+        }
+    }
+
+    candidates.shuffle(rng);
+
+    // Process 15-25% of candidates
+    let process_count = if candidates.is_empty() {
+        0
+    } else {
+        let pct = rng.gen_range(15..=25);
+        (candidates.len() * pct / 100).max(1)
+    };
+
+    for &(x, y) in candidates.iter().take(process_count) {
+        // Tentatively remove the wall
+        map.set(x, y, TILE_EMPTY);
+
+        let area = flood_fill_count(map, width, height, x, y);
+        if area > MAX_OPEN_AREA {
+            // Too large — restore the wall
+            map.set(x, y, TILE_WALL);
+        }
+    }
+}
+
 /// Run DFS maze carving on a single island.
 ///
 /// `island_nodes` contains the DFS node coordinates belonging to this island.
@@ -253,6 +425,17 @@ fn carve_island(
     let mut stack: Vec<(usize, usize)> = vec![(sx, sy)];
     let mut carved = vec![false; max_node_count(width, height)];
     carved[node_index(sx, sy, node_cols)] = true;
+
+    // Pre-mark nodes that are already EMPTY (inside rooms) as carved
+    for &(nx, ny) in island_nodes {
+        if map.get(nx as i32, ny as i32) == Some(TILE_EMPTY) {
+            let ni = node_index(nx, ny, node_cols);
+            if !carved[ni] {
+                carved[ni] = true;
+                stack.push((nx, ny));
+            }
+        }
+    }
 
     while let Some(&(x, y)) = stack.last() {
         let mut dirs = DFS_DIRS;
@@ -312,10 +495,16 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> GridMap
     // Find islands (connected components of DFS nodes)
     let islands = find_islands(&mask, width, height);
 
-    // Carve maze independently on each island
+    // Place small rooms within the masked area
+    let _rooms = place_rooms(&mut map, &mask, width, height, rng);
+
+    // Carve maze independently on each island (rooms are pre-carved)
     for island in &islands {
         carve_island(&mut map, island, width, height, rng);
     }
+
+    // Widen some corridors by selectively removing walls
+    widen_corridors(&mut map, &mask, width, height, rng);
 
     // Place windows on some interior walls that border a corridor
     place_windows(&mut map, width, height, rng);
