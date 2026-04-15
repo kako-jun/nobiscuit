@@ -10,6 +10,53 @@ use std::collections::HashSet;
 
 use crate::maze;
 
+#[derive(Debug)]
+pub enum GamePhase {
+    GaragaraStart { spins: u32, shake_timer: f64 },
+    Playing,
+}
+
+pub struct MazeParams {
+    pub width: usize,
+    pub height: usize,
+    pub num_floors: usize,
+}
+
+pub fn maze_params_from_spins(spins: u32) -> MazeParams {
+    match spins {
+        0..=2 => MazeParams {
+            width: 15,
+            height: 13,
+            num_floors: 1,
+        },
+        3..=4 => MazeParams {
+            width: 25,
+            height: 19,
+            num_floors: 2,
+        },
+        5..=7 => MazeParams {
+            width: 31,
+            height: 25,
+            num_floors: 3,
+        },
+        8..=10 => MazeParams {
+            width: 51,
+            height: 41,
+            num_floors: 5,
+        },
+        11..=15 => MazeParams {
+            width: 81,
+            height: 61,
+            num_floors: 8,
+        },
+        _ => MazeParams {
+            width: 121,
+            height: 91,
+            num_floors: 12,
+        },
+    }
+}
+
 const MINIMAP_M_KEY_DURATION: f64 = 3.0;
 const MINIMAP_BISCUIT_DURATION: f64 = 2.0;
 const MINIMAP_HUNGER_COST: f64 = 0.03;
@@ -198,6 +245,7 @@ pub enum EndingPhase {
 }
 
 pub struct GameState {
+    pub phase: GamePhase,
     pub show_minimap: bool,
     pub hunger: f64,       // 1.0 = full, 0.0 = dead
     pub hunger_drain: f64, // per second
@@ -230,6 +278,7 @@ impl GameState {
     pub fn new() -> Self {
         let debug_mode = std::env::var("NOBISCUIT_DEBUG").is_ok_and(|v| v == "1");
         Self {
+            phase: GamePhase::Playing,
             show_minimap: debug_mode, // visible by default only in debug
             hunger: 1.0,
             hunger_drain: 0.02, // ~50 seconds to starve

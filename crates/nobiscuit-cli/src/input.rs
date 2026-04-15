@@ -7,9 +7,11 @@ pub enum GameInput {
     TurnLeft,
     TurnRight,
     ToggleMinimap,
+    Confirm, // Enter / Space — confirm selection
     Retry,   // Y key — only meaningful in Result phase
     Decline, // N key — only meaningful in Result phase
     Quit,
+    AnyKey, // Any other key — used for galagala spin
 }
 
 pub fn poll_input(timeout: Duration) -> Option<GameInput> {
@@ -56,7 +58,11 @@ pub fn poll_input(timeout: Duration) -> Option<GameInput> {
                 KeyEvent {
                     code: KeyCode::Esc, ..
                 } => Some(GameInput::Quit),
-                _ => None,
+                KeyEvent {
+                    code: KeyCode::Enter | KeyCode::Char(' '),
+                    ..
+                } => Some(GameInput::Confirm),
+                _ => Some(GameInput::AnyKey),
             };
         }
     }
