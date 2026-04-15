@@ -68,7 +68,3 @@ pub fn normalize_angle(a: f64) -> f64 {
     a
 }
 
-/// Correct fisheye distortion by projecting distance onto camera plane
-pub fn fisheye_correct(distance: f64, ray_angle: f64, camera_angle: f64) -> f64 {
-    distance * (ray_angle - camera_angle).cos()
-}

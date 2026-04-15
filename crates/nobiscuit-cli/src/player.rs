@@ -90,7 +90,7 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(x: f64, y: f64, _angle: f64) -> Self {
+    pub fn new(x: f64, y: f64) -> Self {
         let gx = x as i32;
         let gy = y as i32;
         let facing = Dir::East;

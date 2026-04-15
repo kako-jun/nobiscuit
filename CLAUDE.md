@@ -30,14 +30,14 @@ cargo clippy                        # lint
 ### Engine (crates/nobiscuit-engine/src/)
 | File | Purpose |
 |---|---|
-| math.rs | Vec2f, angle normalization, fisheye correction |
+| math.rs | Vec2f, angle normalization |
 | ray.rs | DDA raycasting algorithm |
 | map.rs | TileMap trait + GridMap implementation |
 | camera.rs | Camera position/angle, cast_all_rays |
-| renderer.rs | Wall column rendering |
-| floor.rs | Floor/ceiling gradient shading |
-| framebuffer.rs | Color + pixel buffer |
-| sprite.rs | Sprite projection (stub) |
+| renderer.rs | Wall column rendering with procedural textures |
+| floor.rs | Floor/ceiling with perspective-correct tile patterns |
+| framebuffer.rs | Color + pixel buffer + alpha blending |
+| sprite.rs | Sprite projection + AA art rendering |
 
 ### CLI (crates/nobiscuit-cli/src/)
 | File | Purpose |
@@ -46,16 +46,13 @@ cargo clippy                        # lint
 | terminal.rs | Half-block ANSI renderer with delta flushing |
 | input.rs | Non-blocking crossterm key polling |
 | maze.rs | DFS maze generation (iterative backtracking) |
-| player.rs | Movement + per-axis collision detection |
-| minimap.rs | 2D map overlay |
-| game.rs | Game state (stub for hunger/biscuits) |
-| scene.rs | Scene management (stub) |
-| ui.rs | HUD (stub) |
+| player.rs | Grid-based Wizardry-style movement with animation |
+| minimap.rs | Semi-transparent 2D map overlay |
+| game.rs | Game state (hunger, biscuit pickup, escape) |
+| ui.rs | HUD (hunger bar, bitmap font messages) |
 
 ## Future work (Issue #2)
 
-- Hunger system (biscuits, starvation)
-- Sprite rendering (biscuits as ASCII art scaled by distance)
 - Infinite maze (chunk-based generation)
 - Text on walls (readable when close)
 - Title/ending scenes

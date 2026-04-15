@@ -2,7 +2,6 @@ use nobiscuit_engine::framebuffer::{Color, Framebuffer};
 use nobiscuit_engine::map::{TileMap, TILE_GOAL, TILE_WALL};
 
 const MINIMAP_SCALE: usize = 2;
-const MINIMAP_MARGIN: usize = 2;
 const MINIMAP_ALPHA: f64 = 0.4;
 
 pub fn render_minimap(
@@ -15,9 +14,9 @@ pub fn render_minimap(
     let map_pixel_w = map.width() * MINIMAP_SCALE;
     let map_pixel_h = map.height() * MINIMAP_SCALE;
 
-    // Position: bottom-right corner
-    let offset_x = fb.width().saturating_sub(map_pixel_w + MINIMAP_MARGIN);
-    let offset_y = fb.height().saturating_sub(map_pixel_h + MINIMAP_MARGIN);
+    // Position: flush right, vertically centered
+    let offset_x = fb.width().saturating_sub(map_pixel_w);
+    let offset_y = fb.height().saturating_sub(map_pixel_h) / 2;
 
     // Draw map tiles (semi-transparent)
     for my in 0..map.height() {

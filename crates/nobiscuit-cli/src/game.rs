@@ -94,7 +94,7 @@ impl GameState {
             let dist = (dx * dx + dy * dy).sqrt();
 
             if dist < pickup_dist && s.sprite_type == SPRITE_BISCUIT {
-                self.sprites.remove(i);
+                self.sprites.swap_remove(i);
                 self.biscuits_eaten += 1;
                 self.hunger = (self.hunger + 0.15).min(1.0);
                 self.message = Some(("*crunch*".to_string(), 1.0));

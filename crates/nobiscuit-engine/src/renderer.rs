@@ -19,9 +19,9 @@ fn wall_texture(wall_x: f64, wall_y: f64, side: HitSide, brightness: f64, tile_h
     let hue_shift = ((tile_hash % 30) as f64 - 15.0) * 0.3;
 
     // --- Vertical grooves (panel edges at tile boundaries) ---
-    let groove = if wall_x < 0.04 || wall_x > 0.96 {
+    let groove = if !(0.04..=0.96).contains(&wall_x) {
         0.55
-    } else if wall_x < 0.08 || wall_x > 0.92 {
+    } else if !(0.08..=0.92).contains(&wall_x) {
         0.75
     } else {
         1.0
@@ -78,6 +78,9 @@ fn tile_hash(x: i32, y: i32) -> u32 {
     h
 }
 
+/// Wall height scale factor. Controls how tall walls appear relative to distance.
+const WALL_HEIGHT_SCALE: f64 = 0.5;
+
 /// Render wall columns into the framebuffer
 pub fn render_walls(fb: &mut Framebuffer, rays: &[Option<RayHit>], max_depth: f64) {
     let fb_height = fb.height() as f64;
@@ -86,7 +89,7 @@ pub fn render_walls(fb: &mut Framebuffer, rays: &[Option<RayHit>], max_depth: f6
         let Some(hit) = ray else { continue };
 
         let distance = hit.distance.max(0.001);
-        let wall_height = (fb_height / distance * 0.5).min(fb_height);
+        let wall_height = (fb_height / distance * WALL_HEIGHT_SCALE).min(fb_height);
         let wall_top = ((fb_height - wall_height) / 2.0).max(0.0);
 
         let brightness = (1.0 - distance / max_depth).max(0.0);

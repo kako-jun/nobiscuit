@@ -47,6 +47,7 @@ impl Framebuffer {
     /// Alpha-blend `color` over the existing pixel. `alpha` is 0.0 (invisible) to 1.0 (opaque).
     pub fn blend_pixel(&mut self, x: usize, y: usize, color: Color, alpha: f64) {
         if x < self.width && y < self.height {
+            let alpha = alpha.clamp(0.0, 1.0);
             let bg = self.pixels[y * self.width + x];
             let inv = 1.0 - alpha;
             let r = (color.r as f64 * alpha + bg.r as f64 * inv) as u8;

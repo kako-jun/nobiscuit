@@ -3,7 +3,6 @@ mod input;
 mod maze;
 mod minimap;
 mod player;
-mod scene;
 mod terminal;
 mod ui;
 
@@ -53,7 +52,7 @@ fn main() {
     let map = maze::generate_maze(maze_w, maze_h, &mut rng);
 
     // Player starts at (1.5, 1.5) facing right
-    let mut player = Player::new(1.5, 1.5, 0.0);
+    let mut player = Player::new(1.5, 1.5);
     let mut state = GameState::new();
     state.place_items(&map, &mut rng);
 
@@ -108,13 +107,9 @@ fn main() {
         floor::render_floor_ceiling(
             &mut fb,
             &rays,
-            MAX_DEPTH,
             FLOOR_COLOR,
             CEILING_COLOR,
-            player.camera.x,
-            player.camera.y,
-            player.camera.angle,
-            player.camera.fov,
+            &player.camera,
         );
 
         // Walls

@@ -1,5 +1,5 @@
 use crate::map::TileMap;
-use crate::math::{fisheye_correct, Vec2f};
+use crate::math::Vec2f;
 use crate::ray::{cast_ray, RayHit};
 
 pub struct Camera {
@@ -14,7 +14,10 @@ impl Camera {
         Self { x, y, angle, fov }
     }
 
-    /// Cast rays for all screen columns, returning fisheye-corrected hits
+    /// Cast rays for all screen columns.
+    ///
+    /// ray.rs already returns perpendicular distance (fisheye-free via DDA),
+    /// so no additional correction is applied here.
     pub fn cast_all_rays(
         &self,
         map: &dyn TileMap,
@@ -29,10 +32,7 @@ impl Camera {
                 let ray_angle = self.angle - half_fov
                     + self.fov * (i as f64) / (num_rays as f64);
 
-                cast_ray(map, origin, ray_angle, max_depth).map(|mut hit| {
-                    hit.distance = fisheye_correct(hit.distance, ray_angle, self.angle);
-                    hit
-                })
+                cast_ray(map, origin, ray_angle, max_depth)
             })
             .collect()
     }

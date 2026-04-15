@@ -2,7 +2,11 @@ use nobiscuit_engine::map::{GridMap, TileMap, TILE_EMPTY, TILE_GOAL, TILE_WALL};
 use rand::seq::SliceRandom;
 use rand::Rng;
 
+/// Generate a perfect maze using iterative DFS backtracking.
+///
+/// Both `width` and `height` must be odd numbers (the algorithm steps by 2).
 pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> GridMap {
+    assert!(width % 2 == 1 && height % 2 == 1, "maze dimensions must be odd");
     let mut map = GridMap::new(width, height);
     let mut stack: Vec<(usize, usize)> = Vec::new();
 

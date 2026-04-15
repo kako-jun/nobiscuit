@@ -1,3 +1,4 @@
+use crate::camera::Camera;
 use crate::framebuffer::{Color, Framebuffer};
 use crate::ray::RayHit;
 
@@ -5,26 +6,23 @@ use crate::ray::RayHit;
 ///
 /// Floor uses a tatami/wood-plank grid pattern whose density increases
 /// with distance (Mode7-style). Ceiling uses a subtle grid that fades.
+#[allow(clippy::too_many_arguments)]
 pub fn render_floor_ceiling(
     fb: &mut Framebuffer,
     rays: &[Option<RayHit>],
-    _max_depth: f64,
     floor_color: Color,
     ceiling_color: Color,
-    camera_x: f64,
-    camera_y: f64,
-    camera_angle: f64,
-    fov: f64,
+    camera: &Camera,
 ) {
     let fb_width = fb.width();
     let fb_height = fb.height();
     let fb_h_f = fb_height as f64;
     let horizon = fb_h_f / 2.0;
 
-    let dir_x = camera_angle.cos();
-    let dir_y = camera_angle.sin();
-    let plane_x = -(fov / 2.0).tan() * dir_y;
-    let plane_y = (fov / 2.0).tan() * dir_x;
+    let dir_x = camera.angle.cos();
+    let dir_y = camera.angle.sin();
+    let plane_x = -(camera.fov / 2.0).tan() * dir_y;
+    let plane_y = (camera.fov / 2.0).tan() * dir_x;
 
     // Determine wall bounds per column for gap fill
     let wall_bounds: Vec<(usize, usize)> = rays
@@ -53,8 +51,7 @@ pub fn render_floor_ceiling(
         let row_distance = horizon / row_dist_from_horizon;
         let brightness = (1.0 / (1.0 + row_distance * 0.15)).clamp(0.08, 1.0);
 
-        for col in 0..fb_width {
-            let (wall_top, wall_bottom) = wall_bounds[col];
+        for (col, &(wall_top, wall_bottom)) in wall_bounds.iter().enumerate() {
             if is_floor && y < wall_bottom {
                 continue;
             }
@@ -64,8 +61,8 @@ pub fn render_floor_ceiling(
 
             // World-space coordinate of this floor/ceiling pixel
             let camera_frac = (col as f64 / fb_width as f64) * 2.0 - 1.0;
-            let floor_x = camera_x + (dir_x + plane_x * camera_frac) * row_distance;
-            let floor_y = camera_y + (dir_y + plane_y * camera_frac) * row_distance;
+            let floor_x = camera.x + (dir_x + plane_x * camera_frac) * row_distance;
+            let floor_y = camera.y + (dir_y + plane_y * camera_frac) * row_distance;
 
             if is_floor {
                 let color = floor_tile_color(floor_x, floor_y, floor_color, brightness);
@@ -94,9 +91,9 @@ fn floor_tile_color(wx: f64, wy: f64, base: Color, brightness: f64) -> Color {
     let plank_line = (ty * 6.0).fract() < 0.08;
 
     // Per-tile color variation using cheap hash
-    let tile_ix = wx.floor() as i32;
-    let tile_iy = wy.floor() as i32;
-    let hash = ((tile_ix.wrapping_mul(2654435761_u32 as i32)) ^ (tile_iy.wrapping_mul(2246822519_u32 as i32))) as u32;
+    let tile_ix = wx.floor() as u32;
+    let tile_iy = wy.floor() as u32;
+    let hash = tile_ix.wrapping_mul(2654435761) ^ tile_iy.wrapping_mul(2246822519);
     let variation = 0.9 + 0.1 * ((hash % 100) as f64 / 100.0);
 
     if on_grid {
@@ -115,7 +112,7 @@ fn ceiling_tile_color(wx: f64, wy: f64, base: Color, brightness: f64) -> Color {
     let ty = (wy * 0.5).fract().abs();
 
     // Very faint grid for ceiling panels
-    let on_grid = tx < 0.02 || tx > 0.98 || ty < 0.02 || ty > 0.98;
+    let on_grid = !(0.02..=0.98).contains(&tx) || !(0.02..=0.98).contains(&ty);
 
     if on_grid {
         base.darken(brightness * 0.7)
