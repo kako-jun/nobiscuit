@@ -28,8 +28,13 @@ pub fn render_minimap(
         for mx in 0..map.width() {
             let tile = map.get(mx as i32, my as i32).unwrap_or(TILE_WALL);
 
-            // VOID tiles are not drawn on the minimap (stay black)
-            if tile == TILE_VOID {
+            // VOID tiles and outer boundary walls are not drawn on the minimap
+            if tile == TILE_VOID
+                || mx == 0
+                || mx == map.width() - 1
+                || my == 0
+                || my == map.height() - 1
+            {
                 continue;
             }
 
