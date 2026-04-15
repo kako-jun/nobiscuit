@@ -44,6 +44,18 @@ impl Framebuffer {
         }
     }
 
+    /// Alpha-blend `color` over the existing pixel. `alpha` is 0.0 (invisible) to 1.0 (opaque).
+    pub fn blend_pixel(&mut self, x: usize, y: usize, color: Color, alpha: f64) {
+        if x < self.width && y < self.height {
+            let bg = self.pixels[y * self.width + x];
+            let inv = 1.0 - alpha;
+            let r = (color.r as f64 * alpha + bg.r as f64 * inv) as u8;
+            let g = (color.g as f64 * alpha + bg.g as f64 * inv) as u8;
+            let b = (color.b as f64 * alpha + bg.b as f64 * inv) as u8;
+            self.pixels[y * self.width + x] = Color::rgb(r, g, b);
+        }
+    }
+
     pub fn get_pixel(&self, x: usize, y: usize) -> Color {
         if x < self.width && y < self.height {
             self.pixels[y * self.width + x]

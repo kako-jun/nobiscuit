@@ -105,7 +105,17 @@ fn main() {
         let rays = player.camera.cast_all_rays(&map, num_rays, MAX_DEPTH);
 
         // Floor and ceiling
-        floor::render_floor_ceiling(&mut fb, &rays, MAX_DEPTH, FLOOR_COLOR, CEILING_COLOR);
+        floor::render_floor_ceiling(
+            &mut fb,
+            &rays,
+            MAX_DEPTH,
+            FLOOR_COLOR,
+            CEILING_COLOR,
+            player.camera.x,
+            player.camera.y,
+            player.camera.angle,
+            player.camera.fov,
+        );
 
         // Walls
         renderer::render_walls(&mut fb, &rays, MAX_DEPTH);
