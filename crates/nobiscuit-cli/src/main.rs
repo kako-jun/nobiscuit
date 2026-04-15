@@ -15,7 +15,7 @@ use nobiscuit_engine::renderer;
 use nobiscuit_engine::sprite;
 
 use crate::game::{
-    EndingPhase, GameState, World, SPRITE_BISCUIT, SPRITE_GOAL, SPRITE_STAIRS_DOWN,
+    EndingPhase, GameState, World, FADE_DURATION, SPRITE_BISCUIT, SPRITE_GOAL, SPRITE_STAIRS_DOWN,
     SPRITE_STAIRS_UP,
 };
 use crate::input::{poll_input, GameInput};
@@ -136,7 +136,7 @@ fn main() {
                             state.init_visited(&world);
                             continue;
                         }
-                        Some(GameInput::Quit) => break,
+                        Some(GameInput::Quit) | Some(GameInput::Decline) => break,
                         _ => {}
                     }
                 }
@@ -248,13 +248,12 @@ fn main() {
 
                 // FadeOut effects
                 if let EndingPhase::FadeOut(timer) = state.ending_phase {
-                    let fade_total = 3.0;
-                    let factor = (timer / fade_total).clamp(0.0, 1.0);
+                    let factor = (timer / FADE_DURATION).clamp(0.0, 1.0);
                     fb.darken_all(factor);
 
                     // Starvation: shift frame down for collapse effect
                     if !state.is_alive {
-                        let progress = ((fade_total - timer) / fade_total).clamp(0.0, 1.0);
+                        let progress = ((FADE_DURATION - timer) / FADE_DURATION).clamp(0.0, 1.0);
                         let shift = (progress * fb.height() as f64 * 0.3) as usize;
                         fb.shift_down(shift);
                     }

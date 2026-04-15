@@ -13,6 +13,7 @@ use crate::maze;
 const MINIMAP_M_KEY_DURATION: f64 = 3.0;
 const MINIMAP_BISCUIT_DURATION: f64 = 2.0;
 const MINIMAP_HUNGER_COST: f64 = 0.03;
+pub const FADE_DURATION: f64 = 3.0;
 
 pub const SPRITE_BISCUIT: u8 = 1;
 pub const SPRITE_GOAL: u8 = 2;
@@ -189,6 +190,7 @@ fn place_floor_items(map: &dyn TileMap, is_ground_floor: bool, rng: &mut impl Rn
     sprites
 }
 
+#[derive(Debug)]
 pub enum EndingPhase {
     None,
     FadeOut(f64),  // remaining fade time (3.0 → 0.0)
@@ -336,7 +338,7 @@ impl GameState {
         if self.hunger <= 0.0 {
             self.hunger = 0.0;
             self.is_alive = false;
-            self.ending_phase = EndingPhase::FadeOut(3.0);
+            self.ending_phase = EndingPhase::FadeOut(FADE_DURATION);
             self.message = None;
             return;
         }
@@ -434,7 +436,7 @@ impl GameState {
                 }
             } else if dist < pickup_dist && s.sprite_type == SPRITE_GOAL {
                 self.escaped = true;
-                self.ending_phase = EndingPhase::FadeOut(3.0);
+                self.ending_phase = EndingPhase::FadeOut(FADE_DURATION);
                 self.message = None;
                 return;
             } else {

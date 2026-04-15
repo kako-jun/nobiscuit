@@ -124,13 +124,11 @@ pub fn render_message(fb: &mut Framebuffer, text: &str, color: Color) {
     }
 }
 
-/// Render game over (starvation) result screen
+/// Render game over result screen
 pub fn render_game_over_screen(fb: &mut Framebuffer, timer: f64) {
     let color = Color::rgb(255, 80, 80);
-    if timer >= 0.0 {
-        render_centered_text(fb, "You can no longer move...", color, fb.height() / 2 - 4);
-    }
-    if timer >= 3.0 {
+    render_centered_text(fb, "You can no longer move...", color, fb.height() / 2 - 4);
+    if timer >= 2.0 {
         render_retry_prompt(fb);
     }
 }
@@ -162,7 +160,7 @@ pub fn render_clear_screen(
 
         let mins = elapsed_time as u32 / 60;
         let secs = elapsed_time as u32 % 60;
-        let time_text = format!("Time  {}m {}s", mins, secs);
+        let time_text = format!("Survived  {}m {}s", mins, secs);
         render_centered_text(fb, &time_text, score_color, score_y + 8);
 
         let floor_text = format!("Floors  {}", floors_visited);

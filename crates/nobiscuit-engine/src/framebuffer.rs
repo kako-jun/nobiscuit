@@ -85,21 +85,14 @@ impl Framebuffer {
         if amount == 0 || amount >= self.height {
             return;
         }
-        // Copy rows from bottom to top to avoid overlap
+        // Copy rows bottom-to-top using copy_within (avoids overlap issues)
         for y in (amount..self.height).rev() {
-            let src_start = (y - amount) * self.width;
-            let dst_start = y * self.width;
-            // Safe because src and dst ranges don't overlap (y > y-amount)
-            for x in 0..self.width {
-                self.pixels[dst_start + x] = self.pixels[src_start + x];
-            }
+            let src = (y - amount) * self.width;
+            let dst = y * self.width;
+            self.pixels.copy_within(src..src + self.width, dst);
         }
         // Fill top rows with black
-        let black = Color::default();
-        for y in 0..amount {
-            for x in 0..self.width {
-                self.pixels[y * self.width + x] = black;
-            }
-        }
+        let fill_end = amount * self.width;
+        self.pixels[..fill_end].fill(Color::default());
     }
 }
