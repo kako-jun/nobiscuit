@@ -124,6 +124,84 @@ pub fn render_message(fb: &mut Framebuffer, text: &str, color: Color) {
     }
 }
 
+/// Render game over result screen
+pub fn render_game_over_screen(fb: &mut Framebuffer, timer: f64) {
+    let color = Color::rgb(255, 80, 80);
+    render_centered_text(fb, "You can no longer move...", color, fb.height() / 2 - 4);
+    if timer >= 2.0 {
+        render_retry_prompt(fb);
+    }
+}
+
+/// Render clear (escape) result screen with staged title reveal
+pub fn render_clear_screen(
+    fb: &mut Framebuffer,
+    timer: f64,
+    biscuits_eaten: u32,
+    elapsed_time: f64,
+    floors_visited: usize,
+) {
+    let text_color = Color::rgb(200, 255, 200);
+    let center_y = fb.height() / 2 - 10;
+
+    if timer < 1.5 {
+        render_centered_text(fb, "no biscuit...", text_color, center_y);
+    } else if timer < 3.0 {
+        render_centered_text(fb, "...nobiscuit...", text_color, center_y);
+    } else if timer < 4.5 {
+        render_centered_text(fb, "...nobisuke.", Color::rgb(255, 255, 200), center_y);
+    } else {
+        render_centered_text(fb, "...nobisuke.", Color::rgb(255, 255, 200), center_y);
+        // Score display
+        let score_y = center_y + 10;
+        let score_color = Color::rgb(180, 180, 180);
+        let biscuit_text = format!("Biscuits  {}", biscuits_eaten);
+        render_centered_text(fb, &biscuit_text, score_color, score_y);
+
+        let mins = elapsed_time as u32 / 60;
+        let secs = elapsed_time as u32 % 60;
+        let time_text = format!("Survived  {}m {}s", mins, secs);
+        render_centered_text(fb, &time_text, score_color, score_y + 8);
+
+        let floor_text = format!("Floors  {}", floors_visited);
+        render_centered_text(fb, &floor_text, score_color, score_y + 16);
+    }
+
+    if timer >= 6.0 {
+        render_retry_prompt(fb);
+    }
+}
+
+/// Render "[Y] Retry  [N] Quit" prompt
+fn render_retry_prompt(fb: &mut Framebuffer) {
+    let color = Color::rgb(160, 160, 160);
+    let y = fb.height() - 12;
+    render_centered_text(fb, "[Y] Retry  [N] Quit", color, y);
+}
+
+/// Helper: render text centered horizontally at a given y position
+fn render_centered_text(fb: &mut Framebuffer, text: &str, color: Color, y0: usize) {
+    let char_w = 4;
+    let total_w = text.len() * char_w;
+    let x0 = fb.width().saturating_sub(total_w) / 2;
+
+    for (ci, ch) in text.chars().enumerate() {
+        let bitmap = char_bitmap(ch);
+        let cx = x0 + ci * char_w;
+        for (row, bits) in bitmap.iter().enumerate() {
+            for col in 0..3 {
+                if bits & (1 << (2 - col)) != 0 {
+                    let px = cx + col;
+                    let py = y0 + row;
+                    if px < fb.width() && py < fb.height() {
+                        fb.set_pixel(px, py, color);
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// 3x5 bitmap font — returns 5 rows, each row is 3 bits (MSB = left)
 fn char_bitmap(c: char) -> [u8; 5] {
     match c.to_ascii_uppercase() {
@@ -169,6 +247,8 @@ fn char_bitmap(c: char) -> [u8; 5] {
         '*' => [0b000, 0b101, 0b010, 0b101, 0b000],
         '-' => [0b000, 0b000, 0b111, 0b000, 0b000],
         '/' => [0b001, 0b001, 0b010, 0b100, 0b100],
+        '[' => [0b110, 0b100, 0b100, 0b100, 0b110],
+        ']' => [0b011, 0b001, 0b001, 0b001, 0b011],
         ' ' => [0b000, 0b000, 0b000, 0b000, 0b000],
         _ => [0b111, 0b111, 0b111, 0b111, 0b111], // unknown = filled block
     }

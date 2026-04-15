@@ -15,7 +15,8 @@ use nobiscuit_engine::renderer;
 use nobiscuit_engine::sprite;
 
 use crate::game::{
-    GameState, World, SPRITE_BISCUIT, SPRITE_GOAL, SPRITE_STAIRS_DOWN, SPRITE_STAIRS_UP,
+    EndingPhase, GameState, World, FADE_DURATION, SPRITE_BISCUIT, SPRITE_GOAL, SPRITE_STAIRS_DOWN,
+    SPRITE_STAIRS_UP,
 };
 use crate::input::{poll_input, GameInput};
 use crate::player::Player;
@@ -77,16 +78,16 @@ fn main() {
         // Input
         let input = poll_input(Duration::from_millis(5));
 
-        // Handle quit and toggles
-        match &input {
-            Some(GameInput::Quit) => break,
-            Some(GameInput::ToggleMinimap) => {
-                state.activate_minimap();
-            }
-            _ => {}
-        }
-
         if state.is_alive && !state.escaped {
+            // Handle quit and toggles during normal play
+            match &input {
+                Some(GameInput::Quit) => break,
+                Some(GameInput::ToggleMinimap) => {
+                    state.activate_minimap();
+                }
+                _ => {}
+            }
+
             // Update player
             player.update(input.as_ref(), world.current_map(), dt);
 
@@ -113,9 +114,38 @@ fn main() {
                 state.mark_on_stair();
             }
         } else {
-            // Dead or escaped: any key to quit
-            if input.is_some() {
-                break;
+            // Dead or escaped: advance ending phases
+            match state.ending_phase {
+                EndingPhase::FadeOut(timer) => {
+                    let new_timer = timer - dt;
+                    if new_timer <= 0.0 {
+                        state.ending_phase = EndingPhase::Result(0.0);
+                    } else {
+                        state.ending_phase = EndingPhase::FadeOut(new_timer);
+                    }
+                    // Ignore all input during fade
+                }
+                EndingPhase::Result(timer) => {
+                    state.ending_phase = EndingPhase::Result(timer + dt);
+                    match &input {
+                        Some(GameInput::Retry) => {
+                            // Restart the game
+                            world = World::new(NUM_FLOORS, maze_w, maze_h, &mut rng);
+                            player = Player::new(1.5, 1.5);
+                            state = GameState::new();
+                            state.init_visited(&world);
+                            continue;
+                        }
+                        Some(GameInput::Quit) | Some(GameInput::Decline) => break,
+                        _ => {}
+                    }
+                }
+                EndingPhase::None => {
+                    // Shouldn't happen, but handle gracefully
+                    if input.is_some() {
+                        break;
+                    }
+                }
             }
         }
 
@@ -131,66 +161,104 @@ fn main() {
         // Render
         fb.clear(Color::default());
 
-        let current_map = world.current_map();
-        let num_rays = fb.width();
-        let rays = player
-            .camera
-            .cast_all_rays(current_map, num_rays, MAX_DEPTH);
+        match state.ending_phase {
+            EndingPhase::Result(timer) => {
+                // Black screen with result text
+                if !state.is_alive {
+                    ui::render_game_over_screen(&mut fb, timer);
+                } else {
+                    ui::render_clear_screen(
+                        &mut fb,
+                        timer,
+                        state.biscuits_eaten,
+                        state.elapsed_time,
+                        state.floors_visited.len(),
+                    );
+                }
+            }
+            _ => {
+                // Normal 3D rendering (also used during FadeOut)
+                let current_map = world.current_map();
+                let num_rays = fb.width();
+                let rays = player
+                    .camera
+                    .cast_all_rays(current_map, num_rays, MAX_DEPTH);
 
-        // Floor and ceiling
-        floor::render_floor_ceiling(&mut fb, &rays, FLOOR_COLOR, CEILING_COLOR, &player.camera);
+                // Floor and ceiling
+                floor::render_floor_ceiling(
+                    &mut fb,
+                    &rays,
+                    FLOOR_COLOR,
+                    CEILING_COLOR,
+                    &player.camera,
+                );
 
-        // Walls
-        renderer::render_walls(&mut fb, &rays, MAX_DEPTH);
+                // Walls
+                renderer::render_walls(&mut fb, &rays, MAX_DEPTH);
 
-        // Sprites (biscuits + goal + stairs)
-        let projected = sprite::project_sprites(
-            world.current_sprites(),
-            player.camera.x,
-            player.camera.y,
-            player.camera.angle,
-            player.camera.fov,
-            fb.width(),
-        );
-        sprite::render_sprites(&mut fb, &projected, &rays, &sprite_color, MAX_DEPTH);
+                // Sprites (biscuits + goal + stairs)
+                let projected = sprite::project_sprites(
+                    world.current_sprites(),
+                    player.camera.x,
+                    player.camera.y,
+                    player.camera.angle,
+                    player.camera.fov,
+                    fb.width(),
+                );
+                sprite::render_sprites(&mut fb, &projected, &rays, &sprite_color, MAX_DEPTH);
 
-        // Minimap overlay
-        if state.show_minimap {
-            let visited_floor = if state.debug_mode {
-                &[] as &[Vec<bool>]
-            } else {
-                state
-                    .visited
-                    .get(world.current_floor)
-                    .map(|v| v.as_slice())
-                    .unwrap_or(&[])
-            };
-            let reveal_all = state.debug_mode || state.minimap_reveal_all;
-            minimap::render_minimap(
-                &mut fb,
-                current_map,
-                player.camera.x,
-                player.camera.y,
-                player.camera.angle,
-                visited_floor,
-                reveal_all,
-            );
-        }
+                // Minimap overlay
+                if state.show_minimap {
+                    let visited_floor = if state.debug_mode {
+                        &[] as &[Vec<bool>]
+                    } else {
+                        state
+                            .visited
+                            .get(world.current_floor)
+                            .map(|v| v.as_slice())
+                            .unwrap_or(&[])
+                    };
+                    let reveal_all = state.debug_mode || state.minimap_reveal_all;
+                    minimap::render_minimap(
+                        &mut fb,
+                        current_map,
+                        player.camera.x,
+                        player.camera.y,
+                        player.camera.angle,
+                        visited_floor,
+                        reveal_all,
+                    );
+                }
 
-        // HUD: hunger bar (always visible) + floor indicator (only with minimap)
-        ui::render_hunger_bar(&mut fb, state.hunger);
-        if state.show_minimap {
-            ui::render_floor_indicator(&mut fb, world.current_floor + 1, NUM_FLOORS);
-        }
+                // HUD: hunger bar (always visible) + floor indicator (only with minimap)
+                ui::render_hunger_bar(&mut fb, state.hunger);
+                if state.show_minimap {
+                    ui::render_floor_indicator(&mut fb, world.current_floor + 1, NUM_FLOORS);
+                }
 
-        // Message display
-        if let Some((ref text, _)) = state.message {
-            let msg_color = if state.is_alive {
-                Color::rgb(255, 255, 200)
-            } else {
-                Color::rgb(255, 80, 80)
-            };
-            ui::render_message(&mut fb, text, msg_color);
+                // Message display
+                if let Some((ref text, _)) = state.message {
+                    let msg_color = if state.is_alive {
+                        Color::rgb(255, 255, 200)
+                    } else {
+                        Color::rgb(255, 80, 80)
+                    };
+                    ui::render_message(&mut fb, text, msg_color);
+                }
+
+                // FadeOut effects
+                if let EndingPhase::FadeOut(timer) = state.ending_phase {
+                    let factor = (timer / FADE_DURATION).clamp(0.0, 1.0);
+                    fb.darken_all(factor);
+
+                    // Starvation: shift frame down for collapse effect
+                    if !state.is_alive {
+                        let progress = ((FADE_DURATION - timer) / FADE_DURATION).clamp(0.0, 1.0);
+                        let shift = (progress * fb.height() as f64 * 0.3) as usize;
+                        fb.shift_down(shift);
+                    }
+                }
+            }
         }
 
         // Present to terminal

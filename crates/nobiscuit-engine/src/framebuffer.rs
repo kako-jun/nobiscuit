@@ -72,4 +72,27 @@ impl Framebuffer {
     pub fn height(&self) -> usize {
         self.height
     }
+
+    /// Darken every pixel by `factor` (1.0 = unchanged, 0.0 = black).
+    pub fn darken_all(&mut self, factor: f64) {
+        for pixel in &mut self.pixels {
+            *pixel = pixel.darken(factor);
+        }
+    }
+
+    /// Shift all rows down by `amount` pixels, filling the top with black.
+    pub fn shift_down(&mut self, amount: usize) {
+        if amount == 0 || amount >= self.height {
+            return;
+        }
+        // Copy rows bottom-to-top using copy_within (avoids overlap issues)
+        for y in (amount..self.height).rev() {
+            let src = (y - amount) * self.width;
+            let dst = y * self.width;
+            self.pixels.copy_within(src..src + self.width, dst);
+        }
+        // Fill top rows with black
+        let fill_end = amount * self.width;
+        self.pixels[..fill_end].fill(Color::default());
+    }
 }

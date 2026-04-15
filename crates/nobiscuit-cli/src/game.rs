@@ -6,12 +6,14 @@ use nobiscuit_engine::sprite::Sprite;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use crate::maze;
 
 const MINIMAP_M_KEY_DURATION: f64 = 3.0;
 const MINIMAP_BISCUIT_DURATION: f64 = 2.0;
 const MINIMAP_HUNGER_COST: f64 = 0.03;
+pub const FADE_DURATION: f64 = 3.0;
 
 pub const SPRITE_BISCUIT: u8 = 1;
 pub const SPRITE_GOAL: u8 = 2;
@@ -188,6 +190,13 @@ fn place_floor_items(map: &dyn TileMap, is_ground_floor: bool, rng: &mut impl Rn
     sprites
 }
 
+#[derive(Debug)]
+pub enum EndingPhase {
+    None,
+    FadeOut(f64),  // remaining fade time (3.0 → 0.0)
+    Result(f64),   // elapsed time on result screen (0.0 → ∞)
+}
+
 pub struct GameState {
     pub show_minimap: bool,
     pub hunger: f64,       // 1.0 = full, 0.0 = dead
@@ -209,6 +218,12 @@ pub struct GameState {
     pub visited: Vec<Vec<Vec<bool>>>,
     /// Debug mode (NOBISCUIT_DEBUG=1): constant minimap toggle, no fog of war
     pub debug_mode: bool,
+    /// Current ending phase (fade out → result screen)
+    pub ending_phase: EndingPhase,
+    /// Elapsed game time in seconds
+    pub elapsed_time: f64,
+    /// Set of floor indices the player has visited
+    pub floors_visited: HashSet<usize>,
 }
 
 impl GameState {
@@ -229,6 +244,9 @@ impl GameState {
             minimap_reveal_all: false,
             visited: Vec::new(),
             debug_mode,
+            ending_phase: EndingPhase::None,
+            elapsed_time: 0.0,
+            floors_visited: HashSet::new(),
         }
     }
 
@@ -311,12 +329,17 @@ impl GameState {
             return;
         }
 
+        // Track elapsed time and visited floors
+        self.elapsed_time += dt;
+        self.floors_visited.insert(world.current_floor);
+
         // Drain hunger
         self.hunger -= self.hunger_drain * dt;
         if self.hunger <= 0.0 {
             self.hunger = 0.0;
             self.is_alive = false;
-            self.message = Some(("You starved...".to_string(), 5.0));
+            self.ending_phase = EndingPhase::FadeOut(FADE_DURATION);
+            self.message = None;
             return;
         }
 
@@ -413,7 +436,8 @@ impl GameState {
                 }
             } else if dist < pickup_dist && s.sprite_type == SPRITE_GOAL {
                 self.escaped = true;
-                self.message = Some(("Escaped! ...no biscuit.".to_string(), 10.0));
+                self.ending_phase = EndingPhase::FadeOut(FADE_DURATION);
+                self.message = None;
                 return;
             } else {
                 i += 1;
