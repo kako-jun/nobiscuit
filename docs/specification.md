@@ -113,6 +113,7 @@ const TILE_VOID: u8 = 6;
 | 8 | TILE_DOOR_KITCHEN | Yes** | Kitchen door. Wood grain + doorknob |
 | 9 | TILE_DOOR_TOILET | Yes** | Toilet door. Dark wood + frosted glass window |
 | 10 | TILE_DOOR_GENKAN | Yes** | Entrance door. Heavy dark wood + panel grooves |
+| 11 | TILE_SHOJI | Yes | Shoji screen. Wooden lattice + white washi paper. Upper 20% and lower 30% are wall texture |
 
 \* VOID is solid for movement (impassable). Raycasting returns a special hit that suppresses all rendering for that column.
 
