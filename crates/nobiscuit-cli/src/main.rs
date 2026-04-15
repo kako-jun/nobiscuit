@@ -177,9 +177,11 @@ fn main() {
             );
         }
 
-        // HUD: hunger bar + floor indicator
+        // HUD: hunger bar (always visible) + floor indicator (only with minimap)
         ui::render_hunger_bar(&mut fb, state.hunger);
-        ui::render_floor_indicator(&mut fb, world.current_floor + 1, NUM_FLOORS);
+        if state.show_minimap {
+            ui::render_floor_indicator(&mut fb, world.current_floor + 1, NUM_FLOORS);
+        }
 
         // Message display
         if let Some((ref text, _)) = state.message {
