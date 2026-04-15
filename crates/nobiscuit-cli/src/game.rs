@@ -242,8 +242,8 @@ fn place_floor_items(map: &dyn TileMap, is_ground_floor: bool, rng: &mut impl Rn
 #[derive(Debug)]
 pub enum EndingPhase {
     None,
-    FadeOut(f64),  // remaining fade time (3.0 → 0.0)
-    Result(f64),   // elapsed time on result screen (0.0 → ∞)
+    FadeOut(f64), // remaining fade time (3.0 → 0.0)
+    Result(f64),  // elapsed time on result screen (0.0 → ∞)
 }
 
 pub struct GameState {
@@ -308,9 +308,7 @@ impl GameState {
         self.visited = world
             .floors
             .iter()
-            .map(|floor| {
-                vec![vec![false; floor.map.width()]; floor.map.height()]
-            })
+            .map(|floor| vec![vec![false; floor.map.width()]; floor.map.height()])
             .collect();
     }
 

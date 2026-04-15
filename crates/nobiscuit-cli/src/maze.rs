@@ -272,33 +272,32 @@ fn place_rooms(
     }
 
     // Check if a room position is adjacent to any corridor cell
-    let room_adjacent_to_corridor =
-        |rx: usize, ry: usize, rw: usize, rh: usize| -> bool {
-            // Check cells immediately outside the room border
-            for dx in 0..rw {
-                let x = rx + dx;
-                // One cell above
-                if ry >= 2 && is_corridor[(ry - 2) * width + x] {
-                    return true;
-                }
-                // One cell below
-                if ry + rh + 1 < height && is_corridor[(ry + rh + 1) * width + x] {
-                    return true;
-                }
+    let room_adjacent_to_corridor = |rx: usize, ry: usize, rw: usize, rh: usize| -> bool {
+        // Check cells immediately outside the room border
+        for dx in 0..rw {
+            let x = rx + dx;
+            // One cell above
+            if ry >= 2 && is_corridor[(ry - 2) * width + x] {
+                return true;
             }
-            for dy in 0..rh {
-                let y = ry + dy;
-                // One cell left
-                if rx >= 2 && is_corridor[y * width + (rx - 2)] {
-                    return true;
-                }
-                // One cell right
-                if rx + rw + 1 < width && is_corridor[y * width + (rx + rw + 1)] {
-                    return true;
-                }
+            // One cell below
+            if ry + rh + 1 < height && is_corridor[(ry + rh + 1) * width + x] {
+                return true;
             }
-            false
-        };
+        }
+        for dy in 0..rh {
+            let y = ry + dy;
+            // One cell left
+            if rx >= 2 && is_corridor[y * width + (rx - 2)] {
+                return true;
+            }
+            // One cell right
+            if rx + rw + 1 < width && is_corridor[y * width + (rx + rw + 1)] {
+                return true;
+            }
+        }
+        false
+    };
 
     for attempt in 0..max_attempts {
         let &(rw, rh) = sizes.choose(rng).unwrap();

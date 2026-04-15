@@ -1,7 +1,7 @@
 use crate::framebuffer::{Color, Framebuffer};
 use crate::map::{
-    TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_SHOJI,
-    TILE_VOID, TILE_WINDOW,
+    TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_SHOJI, TILE_VOID,
+    TILE_WINDOW,
 };
 use crate::ray::{HitSide, RayHit};
 

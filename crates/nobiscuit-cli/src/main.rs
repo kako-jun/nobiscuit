@@ -89,7 +89,8 @@ fn main() {
                     Some(GameInput::Confirm) if *spins > 0 => {
                         // Confirm: generate the real world from spin count
                         let params = game::maze_params_from_spins(*spins);
-                        world = World::new(params.num_floors, params.width, params.height, &mut rng);
+                        world =
+                            World::new(params.num_floors, params.width, params.height, &mut rng);
                         player = Player::new(1.5, 1.5);
                         state = GameState::new();
                         state.init_visited(&world);
