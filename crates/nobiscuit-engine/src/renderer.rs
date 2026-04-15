@@ -170,8 +170,9 @@ fn shoji_texture(
     let on_frame = !(0.04..=0.96).contains(&wall_x) || !(0.04..=0.96).contains(&sy);
 
     if on_frame || on_vertical_san || on_horizontal_san {
-        // Dark brown wooden lattice
-        let (br, bg, bb) = (90.0, 60.0, 35.0);
+        // Dark brown wooden lattice with per-tile variation
+        let hue = ((tile_hash % 10) as f64 - 5.0) * 0.5;
+        let (br, bg, bb) = (90.0 + hue, 60.0 + hue * 0.3, 35.0);
         let r = (br * brightness * side_factor).clamp(0.0, 255.0) as u8;
         let g = (bg * brightness * side_factor).clamp(0.0, 255.0) as u8;
         let b = (bb * brightness * side_factor).clamp(0.0, 255.0) as u8;

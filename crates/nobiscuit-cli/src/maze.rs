@@ -541,8 +541,8 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (GridMa
     // Place doors connecting rooms to corridors
     place_doors(&mut map, &rooms, width, height, rng);
 
-    // Place windows on some interior walls that border a corridor
-    place_windows(&mut map, width, height, rng);
+    // Place windows and shoji on some interior walls that border a corridor
+    place_windows_and_shoji(&mut map, width, height, rng);
 
     // Place goal on the largest island.
     // Uses reverse BFS discovery order (last-discovered node in BFS), which
@@ -727,10 +727,10 @@ fn place_doors(map: &mut GridMap, rooms: &[Room], width: usize, height: usize, r
     }
 }
 
-/// Convert some interior walls into windows.
-/// A wall becomes a window candidate if it has at least one empty neighbor
-/// (it's visible from a corridor). ~15% of candidates become windows.
-fn place_windows(map: &mut GridMap, width: usize, height: usize, rng: &mut impl Rng) {
+/// Convert some interior walls into windows or shoji.
+/// A wall becomes a candidate if it has at least one empty neighbor
+/// (it's visible from a corridor). ~15% of candidates are converted; ~30% become shoji, rest windows.
+fn place_windows_and_shoji(map: &mut GridMap, width: usize, height: usize, rng: &mut impl Rng) {
     let mut candidates: Vec<(usize, usize)> = Vec::new();
 
     // Skip outer border (row/col 0 and last)

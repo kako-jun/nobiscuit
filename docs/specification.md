@@ -105,7 +105,7 @@ const TILE_VOID: u8 = 6;
 | 0 | TILE_EMPTY | No | Walkable floor |
 | 1 | TILE_WALL | Yes | Solid wall |
 | 2 | TILE_GOAL | No | Exit marker |
-| 3 | TILE_WINDOW | Yes | Glass pane with wooden frame |
+| 3 | TILE_WINDOW | Yes | Glass pane with wooden frame. Upper/lower 15% are wall texture |
 | 4 | TILE_STAIRS_UP | No | Stairs to upper floor |
 | 5 | TILE_STAIRS_DOWN | No | Stairs to lower floor |
 | 6 | TILE_VOID | Yes* | Non-existent cell (not wall, not floor). Rays return `Some(RayHit{tile: TILE_VOID})` — no wall, floor, or ceiling drawn (column stays black) |
