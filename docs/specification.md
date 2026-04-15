@@ -94,10 +94,10 @@ const TILE_VOID: u8 = 6;
 | Minimap alpha | 0.4 | Overlay transparency |
 | Mask coverage | 40-70% | Fraction of DFS nodes included in irregular mask |
 | Seed points | 2-4 | Number of BFS seed points for mask generation |
-| Room sizes | 2x2 ~ 4x3 | Interior dimensions of placed rooms |
-| Room attempts | 80 | Maximum placement attempts per floor |
-| Max open area | 12 | Maximum contiguous empty cells for corridor widening |
-| Widen ratio | 15-25% | Fraction of wall candidates processed for widening |
+| Room sizes | 2x2 ~ 5x4 | Interior dimensions of placed rooms |
+| Room attempts | 120 | Maximum placement attempts per floor |
+| Corridor ratio | 20-30% | Fraction of island DFS nodes used as corridor backbone |
+| Corridor width | 2 cells | Main corridors are widened to 2 cells |
 
 ## Tile Types
 

@@ -55,7 +55,7 @@ cargo clippy                        # lint
 
 - Multi-floor maze (3 floors connected by stairs)
 - Irregular maze shapes (VOID tiles + mask-based generation, per-island DFS)
-- Variable corridor width + room placement (2x2~4x3 rooms, flood-fill guarded wall removal)
+- Corridor backbone + room placement (2x2~5x4 rooms, 2-cell-wide main corridors, corridor-adjacent room priority)
 - Doors (fusuma, kitchen, toilet, genkan) with auto-open/close and corridor-hub structure
 - Window tiles (glass pane with wooden frame, embedded in wall with top/bottom wall frame)
 - Shoji tiles (wooden lattice + washi paper, embedded in wall — upper 20% / lower 30% wall frame)
