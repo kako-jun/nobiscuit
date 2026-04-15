@@ -9,6 +9,10 @@ use std::collections::HashMap;
 
 use crate::maze;
 
+const MINIMAP_M_KEY_DURATION: f64 = 3.0;
+const MINIMAP_BISCUIT_DURATION: f64 = 2.0;
+const MINIMAP_HUNGER_COST: f64 = 0.03;
+
 pub const SPRITE_BISCUIT: u8 = 1;
 pub const SPRITE_GOAL: u8 = 2;
 pub const SPRITE_STAIRS_UP: u8 = 3;
@@ -209,7 +213,7 @@ pub struct GameState {
 
 impl GameState {
     pub fn new() -> Self {
-        let debug_mode = std::env::var("NOBISCUIT_DEBUG").is_ok();
+        let debug_mode = std::env::var("NOBISCUIT_DEBUG").is_ok_and(|v| v == "1");
         Self {
             show_minimap: debug_mode, // visible by default only in debug
             hunger: 1.0,
@@ -228,7 +232,9 @@ impl GameState {
         }
     }
 
-    /// Initialize fog of war grid from world dimensions
+    /// Initialize fog of war grid from world dimensions.
+    /// Must be called once after World creation. The grid is pre-allocated for all floors
+    /// and persists across floor changes (floors are static after generation).
     pub fn init_visited(&mut self, world: &World) {
         self.visited = world
             .floors
@@ -265,13 +271,20 @@ impl GameState {
 
     /// Activate minimap on M key press.
     /// Debug mode: classic toggle (no cost, no timer).
-    /// Normal mode: timed display (3s) with hunger cost.
+    /// Normal mode: timed display with hunger cost.
+    /// - During biscuit reveal flash: ignored (don't downgrade full reveal)
+    /// - During active M-key timer: extend timer without extra cost
     pub fn activate_minimap(&mut self) {
         if self.debug_mode {
             self.show_minimap = !self.show_minimap;
+        } else if self.minimap_reveal_all {
+            // Don't interrupt biscuit full-reveal flash
+        } else if self.minimap_timer > 0.0 {
+            // Already showing from M-key: extend timer, no extra cost
+            self.minimap_timer = MINIMAP_M_KEY_DURATION;
         } else {
-            self.hunger = (self.hunger - 0.03).max(0.0);
-            self.minimap_timer = 3.0;
+            self.hunger = (self.hunger - MINIMAP_HUNGER_COST).max(0.0);
+            self.minimap_timer = MINIMAP_M_KEY_DURATION;
             self.minimap_reveal_all = false;
             self.show_minimap = true;
         }
@@ -398,7 +411,7 @@ impl GameState {
                 self.message = Some(("*crunch*".to_string(), 1.0));
                 // Biscuit reveal flash: show full map for 2 seconds
                 if !self.debug_mode {
-                    self.minimap_timer = 2.0;
+                    self.minimap_timer = MINIMAP_BISCUIT_DURATION;
                     self.minimap_reveal_all = true;
                     self.show_minimap = true;
                 }

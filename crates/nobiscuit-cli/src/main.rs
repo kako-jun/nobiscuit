@@ -95,8 +95,8 @@ fn main() {
             let map_h = world.current_map().height();
             state.update_visited(
                 world.current_floor,
-                player.camera.x as usize,
-                player.camera.y as usize,
+                player.camera.x.max(0.0) as usize,
+                player.camera.y.max(0.0) as usize,
                 map_w,
                 map_h,
             );

@@ -33,7 +33,9 @@ pub fn render_minimap(
                 continue;
             }
 
-            // Fog of war: skip unvisited tiles unless reveal_all is active
+            // Fog of war: skip unvisited tiles unless reveal_all is active.
+            // When visited is empty (debug mode passes &[]), bounds checks fail
+            // and all tiles pass through — this is intentional.
             if !reveal_all
                 && my < visited.len()
                 && mx < visited.get(my).map_or(0, |row| row.len())
