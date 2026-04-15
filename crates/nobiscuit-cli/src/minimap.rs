@@ -1,6 +1,7 @@
 use nobiscuit_engine::framebuffer::{Color, Framebuffer};
 use nobiscuit_engine::map::{
-    TileMap, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL, TILE_WINDOW,
+    TileMap, TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_GOAL,
+    TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL, TILE_WINDOW,
 };
 
 const MINIMAP_SCALE: usize = 2;
@@ -36,6 +37,10 @@ pub fn render_minimap(
                 TILE_GOAL => Color::rgb(255, 215, 0),
                 TILE_STAIRS_UP => Color::rgb(200, 150, 50),
                 TILE_STAIRS_DOWN => Color::rgb(150, 100, 30),
+                TILE_DOOR_FUSUMA => Color::rgb(220, 210, 190),
+                TILE_DOOR_KITCHEN => Color::rgb(160, 120, 80),
+                TILE_DOOR_TOILET => Color::rgb(140, 110, 70),
+                TILE_DOOR_GENKAN => Color::rgb(100, 70, 40),
                 _ => Color::rgb(100, 140, 100),
             };
 

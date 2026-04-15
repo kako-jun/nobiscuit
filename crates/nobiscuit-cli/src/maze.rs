@@ -1,6 +1,6 @@
 use nobiscuit_engine::map::{
-    GridMap, TileMap, TILE_EMPTY, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID,
-    TILE_WALL, TILE_WINDOW,
+    GridMap, TileMap, TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET,
+    TILE_EMPTY, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL, TILE_WINDOW,
 };
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -19,7 +19,7 @@ const DIRS4: [(i32, i32); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
 const MAX_OPEN_AREA: usize = 12;
 
 /// A placed room (interior coordinates in map space).
-struct Room {
+pub struct Room {
     x: usize, // left column of interior
     y: usize, // top row of interior
     w: usize, // interior width
@@ -431,12 +431,13 @@ fn carve_island(
     carved[node_index(sx, sy, node_cols)] = true;
 
     // Pre-mark nodes that are already EMPTY (inside rooms) as carved
+    // but do NOT push to stack — rooms must stay walled off from corridors.
+    // Doors will connect them later.
     for &(nx, ny) in island_nodes {
         if map.get(nx as i32, ny as i32) == Some(TILE_EMPTY) {
             let ni = node_index(nx, ny, node_cols);
             if !carved[ni] {
                 carved[ni] = true;
-                stack.push((nx, ny));
             }
         }
     }
@@ -477,7 +478,7 @@ fn carve_island(
 /// Generate a maze with irregular shape using mask-based generation.
 ///
 /// Both `width` and `height` must be odd numbers (the algorithm steps by 2).
-pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> GridMap {
+pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (GridMap, Vec<Room>) {
     assert!(
         width % 2 == 1 && height % 2 == 1,
         "maze dimensions must be odd"
@@ -500,7 +501,7 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> GridMap
     let islands = find_islands(&mask, width, height);
 
     // Place small rooms within the masked area
-    let _rooms = place_rooms(&mut map, &mask, width, height, rng);
+    let rooms = place_rooms(&mut map, &mask, width, height, rng);
 
     // Carve maze independently on each island (rooms are pre-carved)
     for island in &islands {
@@ -509,6 +510,9 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> GridMap
 
     // Widen some corridors by selectively removing walls
     widen_corridors(&mut map, &mask, width, height, rng);
+
+    // Place doors connecting rooms to corridors
+    place_doors(&mut map, &rooms, width, height, rng);
 
     // Place windows on some interior walls that border a corridor
     place_windows(&mut map, width, height, rng);
@@ -540,7 +544,137 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> GridMap
         }
     }
 
-    map
+    (map, rooms)
+}
+
+/// Place doors connecting rooms to corridors.
+///
+/// Each room gets 1-2 doors. The door type depends on room size:
+/// - Large (3x3, 4x3): fusuma
+/// - Medium (3x2, 2x3): kitchen door
+/// - Small (2x2): toilet door
+///
+/// One room on the top floor (closest to goal) gets a genkan door.
+fn place_doors(map: &mut GridMap, rooms: &[Room], width: usize, height: usize, rng: &mut impl Rng) {
+    if rooms.is_empty() {
+        return;
+    }
+
+    // Find goal position for genkan placement
+    let mut goal_pos: Option<(usize, usize)> = None;
+    for y in 0..height {
+        for x in 0..width {
+            if map.get(x as i32, y as i32) == Some(TILE_GOAL) {
+                goal_pos = Some((x, y));
+            }
+        }
+    }
+
+    // Find room closest to goal (for genkan door)
+    let genkan_room_idx = goal_pos.map(|(gx, gy)| {
+        rooms
+            .iter()
+            .enumerate()
+            .min_by_key(|(_, r)| {
+                let cx = r.x + r.w / 2;
+                let cy = r.y + r.h / 2;
+                let dx = cx as i32 - gx as i32;
+                let dy = cy as i32 - gy as i32;
+                (dx * dx + dy * dy) as usize
+            })
+            .map(|(i, _)| i)
+            .unwrap_or(0)
+    });
+
+    for (room_idx, room) in rooms.iter().enumerate() {
+        let mut candidates: Vec<(usize, usize)> = Vec::new();
+
+        // Top edge: wall at (x, ry-1), corridor at (x, ry-2)
+        if room.y >= 2 {
+            for dx in 0..room.w {
+                let x = room.x + dx;
+                let wy = room.y - 1;
+                if map.get(x as i32, wy as i32) == Some(TILE_WALL)
+                    && map.get(x as i32, (wy - 1) as i32) == Some(TILE_EMPTY)
+                {
+                    candidates.push((x, wy));
+                }
+            }
+        }
+
+        // Bottom edge: wall at (x, ry+rh), corridor at (x, ry+rh+1)
+        if room.y + room.h + 1 < height {
+            for dx in 0..room.w {
+                let x = room.x + dx;
+                let wy = room.y + room.h;
+                if map.get(x as i32, wy as i32) == Some(TILE_WALL)
+                    && map.get(x as i32, (wy + 1) as i32) == Some(TILE_EMPTY)
+                {
+                    candidates.push((x, wy));
+                }
+            }
+        }
+
+        // Left edge: wall at (rx-1, y), corridor at (rx-2, y)
+        if room.x >= 2 {
+            for dy in 0..room.h {
+                let y = room.y + dy;
+                let wx = room.x - 1;
+                if map.get(wx as i32, y as i32) == Some(TILE_WALL)
+                    && map.get((wx - 1) as i32, y as i32) == Some(TILE_EMPTY)
+                {
+                    candidates.push((wx, y));
+                }
+            }
+        }
+
+        // Right edge: wall at (rx+rw, y), corridor at (rx+rw+1, y)
+        if room.x + room.w + 1 < width {
+            for dy in 0..room.h {
+                let y = room.y + dy;
+                let wx = room.x + room.w;
+                if map.get(wx as i32, y as i32) == Some(TILE_WALL)
+                    && map.get((wx + 1) as i32, y as i32) == Some(TILE_EMPTY)
+                {
+                    candidates.push((wx, y));
+                }
+            }
+        }
+
+        if candidates.is_empty() {
+            continue;
+        }
+
+        candidates.shuffle(rng);
+
+        // Determine door type based on room size
+        let area = room.w * room.h;
+        let is_genkan = genkan_room_idx == Some(room_idx);
+
+        let door_type = if is_genkan {
+            TILE_DOOR_GENKAN
+        } else if area >= 9 {
+            // 3x3 or 4x3
+            TILE_DOOR_FUSUMA
+        } else if area >= 6 {
+            // 3x2, 2x3
+            TILE_DOOR_KITCHEN
+        } else {
+            // 2x2
+            TILE_DOOR_TOILET
+        };
+
+        // Place 1-2 doors
+        let num_doors = if candidates.len() >= 2 && rng.gen_bool(0.3) {
+            2
+        } else {
+            1
+        };
+
+        for &(x, y) in candidates.iter().take(num_doors) {
+            map.set(x, y, door_type);
+        }
+    }
 }
 
 /// Convert some interior walls into windows.
@@ -602,7 +736,7 @@ pub fn generate_floor(
     rng: &mut impl Rng,
 ) -> GridMap {
     let is_top_floor = floor_index == total_floors - 1;
-    let mut map = generate_maze(width, height, rng);
+    let (mut map, rooms) = generate_maze(width, height, rng);
 
     // Remove goal from non-top floors (goal only on top floor)
     if !is_top_floor {
@@ -632,11 +766,24 @@ pub fn generate_floor(
     // landing on whichever stair it finds first — potentially on a different
     // island than the departure island. This is intentional: random island
     // landing maximizes the "wandering between islands" exploration effect.
+    //
+    // Stairs are placed only in corridors (not inside rooms) per 野比家ルール.
+
+    // Helper: check if a cell is inside any room
+    let is_in_room = |x: usize, y: usize| -> bool {
+        rooms
+            .iter()
+            .any(|r| x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h)
+    };
 
     // Place stairs down (not on ground floor)
     if floor_index > 0 {
         for island in &islands {
-            let mut empties = collect_island_empties(&map, island, &[PLAYER_START]);
+            let mut empties: Vec<(usize, usize)> =
+                collect_island_empties(&map, island, &[PLAYER_START])
+                    .into_iter()
+                    .filter(|&(x, y)| !is_in_room(x, y))
+                    .collect();
             empties.shuffle(rng);
             if let Some(&(x, y)) = empties.first() {
                 map.set(x, y, TILE_STAIRS_DOWN);
@@ -657,7 +804,10 @@ pub fn generate_floor(
                 }
                 v
             };
-            let mut empties = collect_island_empties(&map, island, &exclude);
+            let mut empties: Vec<(usize, usize)> = collect_island_empties(&map, island, &exclude)
+                .into_iter()
+                .filter(|&(x, y)| !is_in_room(x, y))
+                .collect();
             empties.shuffle(rng);
             if let Some(&(x, y)) = empties.first() {
                 map.set(x, y, TILE_STAIRS_UP);

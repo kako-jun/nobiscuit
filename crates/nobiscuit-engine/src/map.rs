@@ -7,6 +7,10 @@ pub const TILE_WINDOW: u8 = 3;
 pub const TILE_STAIRS_UP: u8 = 4;
 pub const TILE_STAIRS_DOWN: u8 = 5;
 pub const TILE_VOID: u8 = 6;
+pub const TILE_DOOR_FUSUMA: u8 = 7;
+pub const TILE_DOOR_KITCHEN: u8 = 8;
+pub const TILE_DOOR_TOILET: u8 = 9;
+pub const TILE_DOOR_GENKAN: u8 = 10;
 
 pub trait TileMap {
     fn width(&self) -> usize;
@@ -60,6 +64,10 @@ impl TileMap for GridMap {
             Some(TILE_EMPTY) | Some(TILE_GOAL) | Some(TILE_STAIRS_UP) | Some(TILE_STAIRS_DOWN) => {
                 false
             }
+            Some(TILE_DOOR_FUSUMA)
+            | Some(TILE_DOOR_KITCHEN)
+            | Some(TILE_DOOR_TOILET)
+            | Some(TILE_DOOR_GENKAN) => true, // doors are solid (closed state)
             _ => true, // walls, windows, and out-of-bounds are solid
         }
     }

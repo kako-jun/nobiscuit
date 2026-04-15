@@ -1,5 +1,7 @@
 use crate::framebuffer::{Color, Framebuffer};
-use crate::map::{TILE_VOID, TILE_WINDOW};
+use crate::map::{
+    TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_VOID, TILE_WINDOW,
+};
 use crate::ray::{HitSide, RayHit};
 
 /// Compute textured wall color for a given point on the wall surface.
@@ -124,6 +126,166 @@ fn window_texture(
     }
 }
 
+/// Fusuma (襖) texture: white washi paper with wooden frame and pull handle.
+fn fusuma_texture(
+    wall_x: f64,
+    wall_y: f64,
+    side: HitSide,
+    brightness: f64,
+    _tile_hash: u32,
+) -> Color {
+    let side_factor = match side {
+        HitSide::Vertical => 1.0,
+        HitSide::Horizontal => 0.85,
+    };
+
+    // Wooden frame at left/right edges
+    if !(0.06..=0.94).contains(&wall_x) {
+        let (br, bg, bb) = (100.0, 70.0, 40.0);
+        let r = (br * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let g = (bg * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let b = (bb * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        return Color::rgb(r, g, b);
+    }
+
+    // Pull handle (引手) in center
+    if (0.47..=0.53).contains(&wall_x) && (0.45..=0.55).contains(&wall_y) {
+        let (br, bg, bb) = (180.0, 150.0, 50.0);
+        let r = (br * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let g = (bg * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let b = (bb * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        return Color::rgb(r, g, b);
+    }
+
+    // White washi paper base
+    let (br, bg, bb) = (230.0, 220.0, 200.0);
+    let r = (br * brightness * side_factor).clamp(0.0, 255.0) as u8;
+    let g = (bg * brightness * side_factor).clamp(0.0, 255.0) as u8;
+    let b = (bb * brightness * side_factor).clamp(0.0, 255.0) as u8;
+    Color::rgb(r, g, b)
+}
+
+/// Kitchen door texture: wood grain with door knob.
+fn kitchen_door_texture(
+    wall_x: f64,
+    wall_y: f64,
+    side: HitSide,
+    brightness: f64,
+    tile_hash: u32,
+) -> Color {
+    let side_factor = match side {
+        HitSide::Vertical => 1.0,
+        HitSide::Horizontal => 0.85,
+    };
+
+    // Frame at top/bottom
+    if !(0.05..=0.95).contains(&wall_y) {
+        let (br, bg, bb) = (110.0, 80.0, 50.0);
+        let r = (br * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let g = (bg * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let b = (bb * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        return Color::rgb(r, g, b);
+    }
+
+    // Door knob
+    if (0.78..=0.85).contains(&wall_x) && (0.43..=0.50).contains(&wall_y) {
+        let (br, bg, bb) = (180.0, 180.0, 170.0);
+        let r = (br * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let g = (bg * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let b = (bb * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        return Color::rgb(r, g, b);
+    }
+
+    // Wood grain base
+    let (base_r, base_g, base_b) = (160.0, 120.0, 80.0);
+    let grain_freq = 12.0 + (tile_hash % 5) as f64;
+    let grain = 0.92 + 0.08 * (wall_x * grain_freq * std::f64::consts::PI).sin();
+
+    let r = (base_r * brightness * side_factor * grain).clamp(0.0, 255.0) as u8;
+    let g = (base_g * brightness * side_factor * grain).clamp(0.0, 255.0) as u8;
+    let b = (base_b * brightness * side_factor * grain).clamp(0.0, 255.0) as u8;
+    Color::rgb(r, g, b)
+}
+
+/// Toilet door texture: dark wood with frosted glass window.
+fn toilet_door_texture(
+    wall_x: f64,
+    wall_y: f64,
+    side: HitSide,
+    brightness: f64,
+    tile_hash: u32,
+) -> Color {
+    let side_factor = match side {
+        HitSide::Vertical => 1.0,
+        HitSide::Horizontal => 0.85,
+    };
+
+    // Frame at top/bottom
+    if !(0.05..=0.95).contains(&wall_y) {
+        let (br, bg, bb) = (90.0, 65.0, 35.0);
+        let r = (br * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let g = (bg * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let b = (bb * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        return Color::rgb(r, g, b);
+    }
+
+    // Frosted glass window
+    if (0.35..=0.65).contains(&wall_x) && (0.15..=0.30).contains(&wall_y) {
+        let (br, bg, bb) = (200.0, 210.0, 220.0);
+        let r = (br * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let g = (bg * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let b = (bb * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        return Color::rgb(r, g, b);
+    }
+
+    // Dark wood base
+    let (base_r, base_g, base_b) = (140.0, 110.0, 70.0);
+    let grain_freq = 12.0 + (tile_hash % 5) as f64;
+    let grain = 0.92 + 0.08 * (wall_x * grain_freq * std::f64::consts::PI).sin();
+
+    let r = (base_r * brightness * side_factor * grain).clamp(0.0, 255.0) as u8;
+    let g = (base_g * brightness * side_factor * grain).clamp(0.0, 255.0) as u8;
+    let b = (base_b * brightness * side_factor * grain).clamp(0.0, 255.0) as u8;
+    Color::rgb(r, g, b)
+}
+
+/// Genkan (玄関) door texture: heavy dark wood with panel grooves.
+fn genkan_door_texture(
+    wall_x: f64,
+    wall_y: f64,
+    side: HitSide,
+    brightness: f64,
+    _tile_hash: u32,
+) -> Color {
+    let side_factor = match side {
+        HitSide::Vertical => 1.0,
+        HitSide::Horizontal => 0.85,
+    };
+
+    // Thick frame at top/bottom
+    if !(0.07..=0.93).contains(&wall_y) {
+        let (br, bg, bb) = (60.0, 40.0, 20.0);
+        let r = (br * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let g = (bg * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        let b = (bb * brightness * side_factor).clamp(0.0, 255.0) as u8;
+        return Color::rgb(r, g, b);
+    }
+
+    // Vertical panel grooves at 1/3 and 2/3
+    let groove = if (wall_x - 0.33).abs() < 0.015 || (wall_x - 0.66).abs() < 0.015 {
+        0.6
+    } else {
+        1.0
+    };
+
+    // Heavy dark wood base
+    let (base_r, base_g, base_b) = (100.0, 70.0, 40.0);
+    let r = (base_r * brightness * side_factor * groove).clamp(0.0, 255.0) as u8;
+    let g = (base_g * brightness * side_factor * groove).clamp(0.0, 255.0) as u8;
+    let b = (base_b * brightness * side_factor * groove).clamp(0.0, 255.0) as u8;
+    Color::rgb(r, g, b)
+}
+
 /// Simple hash for tile coordinates to give per-tile variation
 fn tile_hash(x: i32, y: i32) -> u32 {
     let mut h = (x as u32).wrapping_mul(374761393);
@@ -165,10 +327,19 @@ pub fn render_walls(fb: &mut Framebuffer, rays: &[Option<RayHit>], max_depth: f6
             } else {
                 0.5
             };
-            let color = if hit.tile == TILE_WINDOW {
-                window_texture(hit.wall_x, wall_y, hit.side, brightness, th)
-            } else {
-                wall_texture(hit.wall_x, wall_y, hit.side, brightness, th)
+            let color = match hit.tile {
+                TILE_WINDOW => window_texture(hit.wall_x, wall_y, hit.side, brightness, th),
+                TILE_DOOR_FUSUMA => fusuma_texture(hit.wall_x, wall_y, hit.side, brightness, th),
+                TILE_DOOR_KITCHEN => {
+                    kitchen_door_texture(hit.wall_x, wall_y, hit.side, brightness, th)
+                }
+                TILE_DOOR_TOILET => {
+                    toilet_door_texture(hit.wall_x, wall_y, hit.side, brightness, th)
+                }
+                TILE_DOOR_GENKAN => {
+                    genkan_door_texture(hit.wall_x, wall_y, hit.side, brightness, th)
+                }
+                _ => wall_texture(hit.wall_x, wall_y, hit.side, brightness, th),
             };
             fb.set_pixel(col, y, color);
         }
