@@ -59,11 +59,15 @@ cargo clippy                        # lint
 - Floor indicator HUD (e.g. "2F" with dot indicators)
 - Per-floor independent maze generation with biscuits
 
-## Future work (Issue #2)
+## Future work
 
+- #3 Irregular maze shapes (VOID tiles + mask-based generation)
+- #4 Variable corridor width + room placement
+- #5 Doors (fusuma, kitchen, toilet, genkan)
+- #6 Minimap visibility restriction (item-based, limited uses)
+- #7 Shoji (translucent window variant)
+- #8 Galagala opening sequence (difficulty selection + goal)
+- #9 Game over/clear presentation (fade, delay, retry)
 - Movable walls/windows (home maze dynamic rearrangement)
-- Minimap visibility restriction (item-based, limited uses, etc.)
 - Infinite maze (chunk-based generation)
-- Text on walls (readable when close)
-- Title/ending scenes
 - Sound (terminal bell or external)
