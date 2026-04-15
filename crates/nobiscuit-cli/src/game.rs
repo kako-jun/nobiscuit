@@ -380,15 +380,11 @@ impl GameState {
 
         if self.floor_transition.is_none() && !self.on_stair_tile {
             if let Some(transition) = world.check_stairs(player_x, player_y) {
-                let floor_name = match transition.direction {
-                    StairDirection::Up => {
-                        format!("Going up to {}F...", transition.target_floor + 1)
-                    }
-                    StairDirection::Down => {
-                        format!("Going down to {}F...", transition.target_floor + 1)
-                    }
+                let msg = match transition.direction {
+                    StairDirection::Up => "Going up...".to_string(),
+                    StairDirection::Down => "Going down...".to_string(),
                 };
-                self.message = Some((floor_name, 2.0));
+                self.message = Some((msg, 2.0));
                 self.floor_transition = Some(transition);
                 return;
             }
