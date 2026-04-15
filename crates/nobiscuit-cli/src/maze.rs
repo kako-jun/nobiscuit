@@ -6,12 +6,34 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use std::collections::VecDeque;
 
+/// Player spawn position (grid coordinates). Used for stair exclusion and seed guarantee.
+const PLAYER_START: (usize, usize) = (1, 1);
+
+/// DFS neighbor directions (step by 2 on the node grid).
+const DFS_DIRS: [(i32, i32); 4] = [(2, 0), (-2, 0), (0, 2), (0, -2)];
+
+/// Compute the flat index for a DFS node at odd coordinates (x, y).
+/// `node_cols` is `(map_width - 1) / 2`.
+fn node_index(x: usize, y: usize, node_cols: usize) -> usize {
+    (y / 2) * node_cols + (x / 2)
+}
+
+/// Maximum number of nodes for a given grid size (used for visited/selected arrays).
+fn max_node_count(width: usize, height: usize) -> usize {
+    let node_cols = (width - 1) / 2;
+    (height / 2) * node_cols + node_cols
+}
+
 /// Generate a mask indicating which cells are part of the playable area.
 ///
 /// The mask is defined over the full grid (width × height). Outer border cells
 /// are always `true` (kept as TILE_WALL). Interior cells that are `false` will
 /// become TILE_VOID. The algorithm places random seed points on the DFS node
 /// grid (odd coordinates) and expands them via BFS to create organic blobs.
+///
+/// PLAYER_START is always included as a seed to guarantee the spawn tile is valid.
+/// Because BFS expands from PLAYER_START, it will always have neighbors in its island,
+/// so single-node islands at the spawn position cannot occur.
 fn generate_mask(width: usize, height: usize, rng: &mut impl Rng) -> Vec<bool> {
     let mut mask = vec![false; width * height];
 
@@ -48,25 +70,24 @@ fn generate_mask(width: usize, height: usize, rng: &mut impl Rng) -> Vec<bool> {
     let seeds: Vec<(usize, usize)> = all_nodes.iter().copied().take(num_seeds).collect();
 
     // Track which DFS nodes are selected
-    let node_cols = (width - 1) / 2; // number of odd columns
-    let node_index = |x: usize, y: usize| -> usize { (y / 2) * node_cols + (x / 2) };
-    let mut selected = vec![false; (height / 2) * node_cols + node_cols];
+    let node_cols = (width - 1) / 2;
+    let mut selected = vec![false; max_node_count(width, height)];
     let mut selected_count = 0;
 
     let mut queue: VecDeque<(usize, usize)> = VecDeque::new();
 
-    // Always include (1,1) as a seed to guarantee player spawn is valid
+    // Always include PLAYER_START as a seed to guarantee player spawn is valid
     {
-        let ni = node_index(1, 1);
+        let ni = node_index(PLAYER_START.0, PLAYER_START.1, node_cols);
         if !selected[ni] {
             selected[ni] = true;
             selected_count += 1;
-            queue.push_back((1, 1));
+            queue.push_back(PLAYER_START);
         }
     }
 
     for &(sx, sy) in &seeds {
-        let ni = node_index(sx, sy);
+        let ni = node_index(sx, sy, node_cols);
         if !selected[ni] {
             selected[ni] = true;
             selected_count += 1;
@@ -75,7 +96,6 @@ fn generate_mask(width: usize, height: usize, rng: &mut impl Rng) -> Vec<bool> {
     }
 
     // BFS expansion from seeds
-    let dirs: [(i32, i32); 4] = [(2, 0), (-2, 0), (0, 2), (0, -2)];
     while selected_count < target_count {
         if queue.is_empty() {
             break;
@@ -84,7 +104,7 @@ fn generate_mask(width: usize, height: usize, rng: &mut impl Rng) -> Vec<bool> {
         let (cx, cy) = queue[idx];
 
         // Try to expand to a random unselected neighbor
-        let mut neighbor_dirs = dirs;
+        let mut neighbor_dirs = DFS_DIRS;
         neighbor_dirs.shuffle(rng);
 
         let mut expanded = false;
@@ -94,7 +114,7 @@ fn generate_mask(width: usize, height: usize, rng: &mut impl Rng) -> Vec<bool> {
             if nx > 0 && nx < (width - 1) as i32 && ny > 0 && ny < (height - 1) as i32 {
                 let nux = nx as usize;
                 let nuy = ny as usize;
-                let ni = node_index(nux, nuy);
+                let ni = node_index(nux, nuy, node_cols);
                 if !selected[ni] {
                     selected[ni] = true;
                     selected_count += 1;
@@ -115,19 +135,19 @@ fn generate_mask(width: usize, height: usize, rng: &mut impl Rng) -> Vec<bool> {
     // and the even-coordinate cells between adjacent selected nodes
     for y in (1..height - 1).step_by(2) {
         for x in (1..width - 1).step_by(2) {
-            let ni = node_index(x, y);
+            let ni = node_index(x, y, node_cols);
             if selected[ni] {
                 // Mark the node cell itself
                 mask[y * width + x] = true;
 
                 // Mark wall cells between this node and adjacent selected nodes
-                for &(dx, dy) in &dirs {
+                for &(dx, dy) in &DFS_DIRS {
                     let nx = x as i32 + dx;
                     let ny = y as i32 + dy;
                     if nx > 0 && nx < (width - 1) as i32 && ny > 0 && ny < (height - 1) as i32 {
                         let nux = nx as usize;
                         let nuy = ny as usize;
-                        let nni = node_index(nux, nuy);
+                        let nni = node_index(nux, nuy, node_cols);
                         if selected[nni] {
                             // Mark the cell between them
                             let bx = (x as i32 + dx / 2) as usize;
@@ -149,19 +169,15 @@ fn generate_mask(width: usize, height: usize, rng: &mut impl Rng) -> Vec<bool> {
 /// (odd x, odd y) that are connected via adjacent mask-true cells.
 fn find_islands(mask: &[bool], width: usize, height: usize) -> Vec<Vec<(usize, usize)>> {
     let node_cols = (width - 1) / 2;
-    let node_index = |x: usize, y: usize| -> usize { (y / 2) * node_cols + (x / 2) };
-    let max_nodes = (height / 2) * node_cols + node_cols;
-    let mut visited = vec![false; max_nodes];
+    let mut visited = vec![false; max_node_count(width, height)];
     let mut islands = Vec::new();
-
-    let dirs: [(i32, i32); 4] = [(2, 0), (-2, 0), (0, 2), (0, -2)];
 
     for y in (1..height - 1).step_by(2) {
         for x in (1..width - 1).step_by(2) {
             if !mask[y * width + x] {
                 continue;
             }
-            let ni = node_index(x, y);
+            let ni = node_index(x, y, node_cols);
             if visited[ni] {
                 continue;
             }
@@ -175,7 +191,7 @@ fn find_islands(mask: &[bool], width: usize, height: usize) -> Vec<Vec<(usize, u
             while let Some((cx, cy)) = queue.pop_front() {
                 island.push((cx, cy));
 
-                for &(dx, dy) in &dirs {
+                for &(dx, dy) in &DFS_DIRS {
                     let nx = cx as i32 + dx;
                     let ny = cy as i32 + dy;
                     if nx > 0 && nx < (width - 1) as i32 && ny > 0 && ny < (height - 1) as i32 {
@@ -190,7 +206,7 @@ fn find_islands(mask: &[bool], width: usize, height: usize) -> Vec<Vec<(usize, u
                         if !mask[by * width + bx] {
                             continue;
                         }
-                        let nni = node_index(nux, nuy);
+                        let nni = node_index(nux, nuy, node_cols);
                         if !visited[nni] {
                             visited[nni] = true;
                             queue.push_back((nux, nuy));
@@ -224,11 +240,9 @@ fn carve_island(
 
     // Build a set of island nodes for quick lookup
     let node_cols = (width - 1) / 2;
-    let node_index = |x: usize, y: usize| -> usize { (y / 2) * node_cols + (x / 2) };
-    let max_nodes = (height / 2) * node_cols + node_cols;
-    let mut in_island = vec![false; max_nodes];
+    let mut in_island = vec![false; max_node_count(width, height)];
     for &(x, y) in island_nodes {
-        in_island[node_index(x, y)] = true;
+        in_island[node_index(x, y, node_cols)] = true;
     }
 
     // Pick a random starting node
@@ -237,11 +251,11 @@ fn carve_island(
 
     map.set(sx, sy, TILE_EMPTY);
     let mut stack: Vec<(usize, usize)> = vec![(sx, sy)];
-    let mut carved = vec![false; max_nodes];
-    carved[node_index(sx, sy)] = true;
+    let mut carved = vec![false; max_node_count(width, height)];
+    carved[node_index(sx, sy, node_cols)] = true;
 
     while let Some(&(x, y)) = stack.last() {
-        let mut dirs: [(i32, i32); 4] = [(0, -2), (2, 0), (0, 2), (-2, 0)];
+        let mut dirs = DFS_DIRS;
         dirs.shuffle(rng);
 
         let mut found = false;
@@ -252,7 +266,7 @@ fn carve_island(
             if nx > 0 && nx < (width - 1) as i32 && ny > 0 && ny < (height - 1) as i32 {
                 let nux = nx as usize;
                 let nuy = ny as usize;
-                let ni = node_index(nux, nuy);
+                let ni = node_index(nux, nuy, node_cols);
                 if in_island[ni] && !carved[ni] {
                     // Carve the wall between current and neighbor
                     let bx = (x as i32 + dx / 2) as usize;
@@ -306,10 +320,12 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> GridMap
     // Place windows on some interior walls that border a corridor
     place_windows(&mut map, width, height, rng);
 
-    // Place goal on the largest island's furthest cell from its start
+    // Place goal on the largest island.
+    // Uses reverse BFS discovery order (last-discovered node in BFS), which
+    // tends to be far from the BFS start but is not guaranteed to be the
+    // spatially farthest cell.
     let largest_island = islands.iter().max_by_key(|i| i.len());
     if let Some(island) = largest_island {
-        // Find bottom-right-most empty cell in this island
         let mut goal_placed = false;
         for &(x, y) in island.iter().rev() {
             if map.get(x as i32, y as i32) == Some(TILE_EMPTY) {
@@ -368,6 +384,7 @@ fn place_windows(map: &mut GridMap, width: usize, height: usize, rng: &mut impl 
 }
 
 /// Collect empty cells on a specific island for item placement.
+/// Note: `exclude` is scanned linearly but is always small (1-2 entries).
 fn collect_island_empties(
     map: &dyn TileMap,
     island: &[(usize, usize)],
@@ -417,13 +434,16 @@ pub fn generate_floor(
     // Find islands for stair placement
     let islands = find_islands(&mask, width, height);
 
-    // Place stairs: each island gets at least one stair (if applicable)
-    let start_pos = (1usize, 1usize);
+    // Place stairs: each island gets at least one stair (if applicable).
+    // change_floor() does a full-map scan for the matching stair type,
+    // landing on whichever stair it finds first — potentially on a different
+    // island than the departure island. This is intentional: random island
+    // landing maximizes the "wandering between islands" exploration effect.
 
     // Place stairs down (not on ground floor)
     if floor_index > 0 {
         for island in &islands {
-            let mut empties = collect_island_empties(&map, island, &[start_pos]);
+            let mut empties = collect_island_empties(&map, island, &[PLAYER_START]);
             empties.shuffle(rng);
             if let Some(&(x, y)) = empties.first() {
                 map.set(x, y, TILE_STAIRS_DOWN);
@@ -435,7 +455,7 @@ pub fn generate_floor(
     if floor_index < total_floors - 1 {
         for island in &islands {
             let exclude: Vec<(usize, usize)> = {
-                let mut v = vec![start_pos];
+                let mut v = vec![PLAYER_START];
                 // Exclude cells already used for stairs down
                 for &(nx, ny) in island {
                     if map.get(nx as i32, ny as i32) == Some(TILE_STAIRS_DOWN) {

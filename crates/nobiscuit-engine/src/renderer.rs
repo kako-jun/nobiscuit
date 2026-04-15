@@ -1,5 +1,5 @@
 use crate::framebuffer::{Color, Framebuffer};
-use crate::map::TILE_WINDOW;
+use crate::map::{TILE_VOID, TILE_WINDOW};
 use crate::ray::{HitSide, RayHit};
 
 /// Compute textured wall color for a given point on the wall surface.
@@ -143,6 +143,11 @@ pub fn render_walls(fb: &mut Framebuffer, rays: &[Option<RayHit>], max_depth: f6
 
     for (col, ray) in rays.iter().enumerate() {
         let Some(hit) = ray else { continue };
+
+        // VOID tiles produce no visible wall — column stays black
+        if hit.tile == TILE_VOID {
+            continue;
+        }
 
         let distance = hit.distance.max(0.001);
         let wall_height = (fb_height / distance * WALL_HEIGHT_SCALE).min(fb_height);

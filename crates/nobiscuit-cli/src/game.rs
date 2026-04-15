@@ -73,10 +73,14 @@ impl World {
     }
 
     /// Move player to a different floor. Returns the spawn position on the new floor.
+    ///
+    /// Scans the full map for the first matching stair tile. With multiple islands
+    /// per floor, the player may land on a different island than expected — this is
+    /// intentional, creating the "wandering between islands" exploration effect.
     pub fn change_floor(&mut self, target_floor: usize, direction: StairDirection) -> (f64, f64) {
         self.current_floor = target_floor;
 
-        // Find the matching stairs on the new floor
+        // Find the matching stairs on the new floor (first match wins)
         let target_tile = match direction {
             StairDirection::Up => TILE_STAIRS_DOWN, // came up, so land on down-stairs
             StairDirection::Down => TILE_STAIRS_UP, // went down, land on up-stairs

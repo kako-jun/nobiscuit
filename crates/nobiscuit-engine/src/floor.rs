@@ -1,5 +1,6 @@
 use crate::camera::Camera;
 use crate::framebuffer::{Color, Framebuffer};
+use crate::map::TILE_VOID;
 use crate::ray::RayHit;
 
 /// Render floor and ceiling with perspective-correct tile pattern.
@@ -24,15 +25,22 @@ pub fn render_floor_ceiling(
     let plane_x = -(camera.fov / 2.0).tan() * dir_y;
     let plane_y = (camera.fov / 2.0).tan() * dir_x;
 
-    // Determine wall bounds per column for gap fill
+    // Determine wall bounds per column for gap fill.
+    // VOID columns use (0, fb_height) to suppress all floor/ceiling rendering
+    // (the column stays black, representing the void beyond the map).
     let wall_bounds: Vec<(usize, usize)> = rays
         .iter()
         .map(|ray| {
             if let Some(hit) = ray {
-                let distance = hit.distance.max(0.001);
-                let wall_height = (fb_h_f / distance * 0.5).min(fb_h_f);
-                let top = ((fb_h_f - wall_height) / 2.0).max(0.0);
-                (top as usize, ((top + wall_height) as usize).min(fb_height))
+                if hit.tile == TILE_VOID {
+                    // VOID: cover entire column to suppress floor/ceiling
+                    (0, fb_height)
+                } else {
+                    let distance = hit.distance.max(0.001);
+                    let wall_height = (fb_h_f / distance * 0.5).min(fb_h_f);
+                    let top = ((fb_h_f - wall_height) / 2.0).max(0.0);
+                    (top as usize, ((top + wall_height) as usize).min(fb_height))
+                }
             } else {
                 (fb_height / 2, fb_height / 2)
             }
