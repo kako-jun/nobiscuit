@@ -56,6 +56,7 @@ cargo clippy                        # lint
 - Multi-floor maze (3 floors connected by stairs)
 - Irregular maze shapes (VOID tiles + mask-based generation, per-island DFS)
 - Variable corridor width + room placement (2x2~4x3 rooms, flood-fill guarded wall removal)
+- Doors (fusuma, kitchen, toilet, genkan) with auto-open/close and corridor-hub structure
 - Window tiles (glass pane with wooden frame, distinct from walls)
 - Stair sprites (up/down arrows) with floor transition
 - Floor indicator HUD (e.g. "2F" with dot indicators)
@@ -63,7 +64,6 @@ cargo clippy                        # lint
 
 ## Future work
 
-- #5 Doors (fusuma, kitchen, toilet, genkan)
 - #6 Minimap visibility restriction (item-based, limited uses)
 - #7 Shoji (translucent window variant)
 - #8 Galagala opening sequence (difficulty selection + goal)
