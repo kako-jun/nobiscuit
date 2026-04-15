@@ -57,14 +57,14 @@ cargo clippy                        # lint
 - Irregular maze shapes (VOID tiles + mask-based generation, per-island DFS)
 - Variable corridor width + room placement (2x2~4x3 rooms, flood-fill guarded wall removal)
 - Doors (fusuma, kitchen, toilet, genkan) with auto-open/close and corridor-hub structure
-- Window tiles (glass pane with wooden frame, distinct from walls)
+- Window tiles (glass pane with wooden frame, embedded in wall with top/bottom wall frame)
+- Shoji tiles (wooden lattice + washi paper, embedded in wall — upper 20% / lower 30% wall frame)
 - Stair sprites (up/down arrows) with floor transition
 - Floor indicator HUD (e.g. "2F" with dot indicators)
 - Per-floor independent maze generation with biscuits
 - Minimap visibility restriction: fog of war, timed display (M key: 3s with hunger cost, biscuit: 2s full reveal), debug mode via NOBISCUIT_DEBUG=1
 
 ## Future work
-- #7 Shoji (translucent window variant)
 - #8 Galagala opening sequence (difficulty selection + goal)
 - #9 Game over/clear presentation (fade, delay, retry)
 - Movable walls/windows (home maze dynamic rearrangement)

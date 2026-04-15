@@ -1,6 +1,7 @@
 use nobiscuit_engine::map::{
     GridMap, TileMap, TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET,
-    TILE_EMPTY, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL, TILE_WINDOW,
+    TILE_EMPTY, TILE_GOAL, TILE_SHOJI, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL,
+    TILE_WINDOW,
 };
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -540,8 +541,8 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (GridMa
     // Place doors connecting rooms to corridors
     place_doors(&mut map, &rooms, width, height, rng);
 
-    // Place windows on some interior walls that border a corridor
-    place_windows(&mut map, width, height, rng);
+    // Place windows and shoji on some interior walls that border a corridor
+    place_windows_and_shoji(&mut map, width, height, rng);
 
     // Place goal on the largest island.
     // Uses reverse BFS discovery order (last-discovered node in BFS), which
@@ -726,10 +727,10 @@ fn place_doors(map: &mut GridMap, rooms: &[Room], width: usize, height: usize, r
     }
 }
 
-/// Convert some interior walls into windows.
-/// A wall becomes a window candidate if it has at least one empty neighbor
-/// (it's visible from a corridor). ~15% of candidates become windows.
-fn place_windows(map: &mut GridMap, width: usize, height: usize, rng: &mut impl Rng) {
+/// Convert some interior walls into windows or shoji.
+/// A wall becomes a candidate if it has at least one empty neighbor
+/// (it's visible from a corridor). ~15% of candidates are converted; ~30% become shoji, rest windows.
+fn place_windows_and_shoji(map: &mut GridMap, width: usize, height: usize, rng: &mut impl Rng) {
     let mut candidates: Vec<(usize, usize)> = Vec::new();
 
     // Skip outer border (row/col 0 and last)
@@ -755,7 +756,12 @@ fn place_windows(map: &mut GridMap, width: usize, height: usize, rng: &mut impl 
     candidates.shuffle(rng);
     let window_count = (candidates.len() / 7).max(3);
     for &(x, y) in candidates.iter().take(window_count) {
-        map.set(x, y, TILE_WINDOW);
+        // ~30% of window candidates become shoji, the rest stay as windows
+        if rng.gen_bool(0.3) {
+            map.set(x, y, TILE_SHOJI);
+        } else {
+            map.set(x, y, TILE_WINDOW);
+        }
     }
 }
 
