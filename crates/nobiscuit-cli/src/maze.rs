@@ -16,35 +16,12 @@ const DFS_DIRS: [(i32, i32); 4] = [(2, 0), (-2, 0), (0, 2), (0, -2)];
 /// 4-directional neighbors (step by 1).
 const DIRS4: [(i32, i32); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
 
-/// Maximum contiguous empty area allowed when removing a wall for widening.
-const MAX_OPEN_AREA: usize = 12;
-
 /// A placed room (interior coordinates in map space).
 pub struct Room {
     pub x: usize, // left column of interior
     pub y: usize, // top row of interior
     pub w: usize, // interior width
     pub h: usize, // interior height
-}
-
-/// Check if a cell (cx, cy) is on the border of any room (the wall cells
-/// immediately surrounding a room's interior).
-fn is_room_border(rooms: &[Room], cx: usize, cy: usize) -> bool {
-    for r in rooms {
-        // Room border: one cell outside the interior in each direction
-        let bx0 = r.x.saturating_sub(1);
-        let by0 = r.y.saturating_sub(1);
-        let bx1 = r.x + r.w; // one past right edge
-        let by1 = r.y + r.h; // one past bottom edge
-        if cx >= bx0 && cx <= bx1 && cy >= by0 && cy <= by1 {
-            // Inside the border rectangle but not inside the interior
-            let in_interior = cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
-            if !in_interior {
-                return true;
-            }
-        }
-    }
-    false
 }
 
 /// Compute the flat index for a DFS node at odd coordinates (x, y).
@@ -257,11 +234,11 @@ fn find_islands(mask: &[bool], width: usize, height: usize) -> Vec<Vec<(usize, u
     islands
 }
 
-/// Place small rooms randomly within the masked area.
+/// Place rooms within the masked area, preferring positions adjacent to corridors.
 ///
-/// Rooms have interior sizes ranging from 2×2 to 4×3. They are placed so that
+/// Rooms have interior sizes ranging from 2×2 to 5×4. They are placed so that
 /// all interior cells fall within the mask (not VOID) and do not overlap
-/// existing room interiors. Rooms may be adjacent with only a wall between them.
+/// existing room interiors. Corridor-adjacent positions are tried first.
 ///
 /// Room coordinates are not restricted to odd positions — both odd and even cells
 /// are set to TILE_EMPTY. DFS connection works via odd-coordinate nodes inside
@@ -269,16 +246,61 @@ fn find_islands(mask: &[bool], width: usize, height: usize) -> Vec<Vec<(usize, u
 fn place_rooms(
     map: &mut GridMap,
     mask: &[bool],
+    corridor_cells: &[(usize, usize)],
     width: usize,
     height: usize,
     rng: &mut impl Rng,
 ) -> Vec<Room> {
     let mut rooms: Vec<Room> = Vec::new();
-    let max_attempts = 80;
-    // Room interior sizes: (w, h) from 2×2 to 4×3
-    let sizes: [(usize, usize); 5] = [(2, 2), (3, 2), (2, 3), (3, 3), (4, 3)];
+    let max_attempts = 120;
+    // Room interior sizes: (w, h) from 2×2 to 5×4
+    let sizes: [(usize, usize); 8] = [
+        (2, 2),
+        (3, 2),
+        (2, 3),
+        (3, 3),
+        (4, 3),
+        (4, 4),
+        (5, 3),
+        (5, 4),
+    ];
 
-    for _ in 0..max_attempts {
+    // Build a set of corridor cells for adjacency checking
+    let mut is_corridor = vec![false; width * height];
+    for &(cx, cy) in corridor_cells {
+        is_corridor[cy * width + cx] = true;
+    }
+
+    // Check if a room position is adjacent to any corridor cell
+    let room_adjacent_to_corridor =
+        |rx: usize, ry: usize, rw: usize, rh: usize| -> bool {
+            // Check cells immediately outside the room border
+            for dx in 0..rw {
+                let x = rx + dx;
+                // One cell above
+                if ry >= 2 && is_corridor[(ry - 2) * width + x] {
+                    return true;
+                }
+                // One cell below
+                if ry + rh + 1 < height && is_corridor[(ry + rh + 1) * width + x] {
+                    return true;
+                }
+            }
+            for dy in 0..rh {
+                let y = ry + dy;
+                // One cell left
+                if rx >= 2 && is_corridor[y * width + (rx - 2)] {
+                    return true;
+                }
+                // One cell right
+                if rx + rw + 1 < width && is_corridor[y * width + (rx + rw + 1)] {
+                    return true;
+                }
+            }
+            false
+        };
+
+    for attempt in 0..max_attempts {
         let &(rw, rh) = sizes.choose(rng).unwrap();
         // Interior must fit within border (1..width-1, 1..height-1)
         if rw + 2 > width || rh + 2 > height {
@@ -286,6 +308,14 @@ fn place_rooms(
         }
         let rx = rng.gen_range(1..width - 1 - rw + 1);
         let ry = rng.gen_range(1..height - 1 - rh + 1);
+
+        // First 80% of attempts: require corridor adjacency (if corridors exist)
+        if attempt < max_attempts * 80 / 100
+            && !corridor_cells.is_empty()
+            && !room_adjacent_to_corridor(rx, ry, rw, rh)
+        {
+            continue;
+        }
 
         // Check all interior cells are in mask
         let mut fits = true;
@@ -333,96 +363,129 @@ fn place_rooms(
     rooms
 }
 
-/// Measure the contiguous empty area reachable from (sx, sy) via flood fill.
-fn flood_fill_count(map: &GridMap, width: usize, height: usize, sx: usize, sy: usize) -> usize {
-    let mut visited = vec![false; width * height];
-    let mut queue = VecDeque::new();
-    visited[sy * width + sx] = true;
-    queue.push_back((sx, sy));
-    let mut count = 0;
-
-    while let Some((cx, cy)) = queue.pop_front() {
-        count += 1;
-        for &(dx, dy) in &DIRS4 {
-            let nx = cx as i32 + dx;
-            let ny = cy as i32 + dy;
-            if nx >= 0 && nx < width as i32 && ny >= 0 && ny < height as i32 {
-                let nux = nx as usize;
-                let nuy = ny as usize;
-                let idx = nuy * width + nux;
-                if !visited[idx] && map.get(nx, ny) == Some(TILE_EMPTY) {
-                    visited[idx] = true;
-                    queue.push_back((nux, nuy));
-                }
-            }
-        }
-    }
-
-    count
-}
-
-/// Widen some corridors by selectively removing walls.
+/// Generate corridor backbone for an island using random walk on DFS nodes.
 ///
-/// Candidate walls are interior TILE_WALL cells adjacent to 2+ TILE_EMPTY cells.
-/// Room border walls are excluded to preserve the corridor-hub structure.
-/// A subset of candidates is processed: each wall is tentatively removed and
-/// a flood fill checks whether the resulting open area exceeds MAX_OPEN_AREA.
-/// If it does, the wall is restored.
-fn widen_corridors(
+/// Selects 20-30% of the island's DFS nodes and connects them, then widens
+/// the corridors to 2 cells by carving orthogonal neighbors. Returns the
+/// set of cells that form the corridor (for room placement adjacency checks)
+/// and the set of DFS node indices that are pre-carved (corridor nodes).
+fn generate_corridors(
     map: &mut GridMap,
-    mask: &[bool],
-    rooms: &[Room],
+    island_nodes: &[(usize, usize)],
     width: usize,
     height: usize,
     rng: &mut impl Rng,
-) {
-    let mut candidates: Vec<(usize, usize)> = Vec::new();
+) -> (Vec<(usize, usize)>, Vec<usize>) {
+    if island_nodes.is_empty() {
+        return (Vec::new(), Vec::new());
+    }
 
-    for y in 1..height - 1 {
-        for x in 1..width - 1 {
-            if !mask[y * width + x] {
-                continue;
-            }
-            if map.get(x as i32, y as i32) != Some(TILE_WALL) {
-                continue;
-            }
-            // Skip room border walls to preserve corridor-hub structure
-            if is_room_border(rooms, x, y) {
-                continue;
-            }
-            // Count adjacent empty cells
-            let mut empty_neighbors = 0;
-            for &(dx, dy) in &DIRS4 {
-                if map.get(x as i32 + dx, y as i32 + dy) == Some(TILE_EMPTY) {
-                    empty_neighbors += 1;
+    let node_cols = (width - 1) / 2;
+    let mut in_island = vec![false; max_node_count(width, height)];
+    for &(x, y) in island_nodes {
+        in_island[node_index(x, y, node_cols)] = true;
+    }
+
+    // Target: 20-30% of island nodes become corridor nodes
+    let target = (island_nodes.len() * rng.gen_range(20..=30) / 100).max(1);
+
+    // Random walk from a random start node
+    let start_idx = rng.gen_range(0..island_nodes.len());
+    let (sx, sy) = island_nodes[start_idx];
+
+    let mut corridor_node_indices: Vec<usize> = Vec::new();
+    let mut is_corridor_node = vec![false; max_node_count(width, height)];
+    let mut corridor_cells: Vec<(usize, usize)> = Vec::new();
+
+    // Mark start
+    let si = node_index(sx, sy, node_cols);
+    is_corridor_node[si] = true;
+    corridor_node_indices.push(si);
+    map.set(sx, sy, TILE_EMPTY);
+    corridor_cells.push((sx, sy));
+
+    let mut current = (sx, sy);
+    let mut stuck_count = 0;
+
+    while corridor_node_indices.len() < target {
+        let (cx, cy) = current;
+        let mut dirs = DFS_DIRS;
+        dirs.shuffle(rng);
+
+        let mut moved = false;
+        for (dx, dy) in dirs {
+            let nx = cx as i32 + dx;
+            let ny = cy as i32 + dy;
+            if nx > 0 && nx < (width - 1) as i32 && ny > 0 && ny < (height - 1) as i32 {
+                let nux = nx as usize;
+                let nuy = ny as usize;
+                let ni = node_index(nux, nuy, node_cols);
+                if in_island[ni] && !is_corridor_node[ni] {
+                    // Carve the wall between current and neighbor
+                    let bx = (cx as i32 + dx / 2) as usize;
+                    let by = (cy as i32 + dy / 2) as usize;
+                    map.set(bx, by, TILE_EMPTY);
+                    corridor_cells.push((bx, by));
+
+                    map.set(nux, nuy, TILE_EMPTY);
+                    corridor_cells.push((nux, nuy));
+
+                    is_corridor_node[ni] = true;
+                    corridor_node_indices.push(ni);
+                    current = (nux, nuy);
+                    moved = true;
+                    stuck_count = 0;
+                    break;
                 }
             }
-            if empty_neighbors >= 2 {
-                candidates.push((x, y));
+        }
+
+        if !moved {
+            stuck_count += 1;
+            if stuck_count > island_nodes.len() {
+                break;
+            }
+            // Jump to a random existing corridor node and try from there
+            let jump_idx = rng.gen_range(0..corridor_node_indices.len());
+            // Find the node coordinates for this index
+            for &(x, y) in island_nodes {
+                if node_index(x, y, node_cols) == corridor_node_indices[jump_idx] {
+                    current = (x, y);
+                    break;
+                }
             }
         }
     }
 
-    candidates.shuffle(rng);
+    // Widen corridors to 2 cells: for each corridor cell, carve orthogonal neighbors
+    let mut extra_cells: Vec<(usize, usize)> = Vec::new();
+    for &(cx, cy) in &corridor_cells {
+        for &(dx, dy) in &DIRS4 {
+            let nx = cx as i32 + dx;
+            let ny = cy as i32 + dy;
+            if nx > 0 && nx < (width - 1) as i32 && ny > 0 && ny < (height - 1) as i32 {
+                let nux = nx as usize;
+                let nuy = ny as usize;
+                // Only widen into masked cells (not VOID)
+                if map.get(nx, ny) == Some(TILE_WALL) {
+                    map.set(nux, nuy, TILE_EMPTY);
+                    extra_cells.push((nux, nuy));
 
-    // Process 15-25% of candidates
-    let process_count = if candidates.is_empty() {
-        0
-    } else {
-        let pct = rng.gen_range(15..=25);
-        (candidates.len() * pct / 100).max(1)
-    };
-
-    for &(x, y) in candidates.iter().take(process_count) {
-        // Tentatively remove the wall
-        map.set(x, y, TILE_EMPTY);
-
-        let area = flood_fill_count(map, width, height, x, y);
-        if area > MAX_OPEN_AREA {
-            // Too large — restore the wall
-            map.set(x, y, TILE_WALL);
+                    // If this widening hit a DFS node, mark it as pre-carved
+                    if nux % 2 == 1 && nuy % 2 == 1 {
+                        let ni = node_index(nux, nuy, node_cols);
+                        if in_island[ni] && !is_corridor_node[ni] {
+                            is_corridor_node[ni] = true;
+                            corridor_node_indices.push(ni);
+                        }
+                    }
+                }
+            }
         }
     }
+    corridor_cells.extend(extra_cells);
+
+    (corridor_cells, corridor_node_indices)
 }
 
 /// Run DFS maze carving on a single island.
@@ -433,6 +496,7 @@ fn widen_corridors(
 fn carve_island(
     map: &mut GridMap,
     island_nodes: &[(usize, usize)],
+    corridor_node_indices: &[usize],
     width: usize,
     height: usize,
     rng: &mut impl Rng,
@@ -457,9 +521,9 @@ fn carve_island(
     let mut carved = vec![false; max_node_count(width, height)];
     carved[node_index(sx, sy, node_cols)] = true;
 
-    // Pre-mark nodes that are already EMPTY (inside rooms) as carved
-    // but do NOT push to stack — rooms must stay walled off from corridors.
-    // Doors will connect them later.
+    // Pre-mark nodes that are already EMPTY (inside rooms or corridors) as carved
+    // but do NOT push to stack — rooms/corridors must stay walled off from DFS paths.
+    // Doors will connect rooms later.
     for &(nx, ny) in island_nodes {
         if map.get(nx as i32, ny as i32) == Some(TILE_EMPTY) {
             let ni = node_index(nx, ny, node_cols);
@@ -467,6 +531,11 @@ fn carve_island(
                 carved[ni] = true;
             }
         }
+    }
+
+    // Also mark corridor node indices as carved
+    for &ni in corridor_node_indices {
+        carved[ni] = true;
     }
 
     while let Some(&(x, y)) = stack.last() {
@@ -527,16 +596,22 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (GridMa
     // Find islands (connected components of DFS nodes)
     let islands = find_islands(&mask, width, height);
 
-    // Place small rooms within the masked area
-    let rooms = place_rooms(&mut map, &mask, width, height, rng);
-
-    // Carve maze independently on each island (rooms are pre-carved)
+    // Generate corridor backbone on each island
+    let mut all_corridor_cells: Vec<(usize, usize)> = Vec::new();
+    let mut island_corridor_indices: Vec<Vec<usize>> = Vec::new();
     for island in &islands {
-        carve_island(&mut map, island, width, height, rng);
+        let (cells, indices) = generate_corridors(&mut map, island, width, height, rng);
+        all_corridor_cells.extend(&cells);
+        island_corridor_indices.push(indices);
     }
 
-    // Widen some corridors by selectively removing walls
-    widen_corridors(&mut map, &mask, &rooms, width, height, rng);
+    // Place rooms, preferring corridor-adjacent positions
+    let rooms = place_rooms(&mut map, &mask, &all_corridor_cells, width, height, rng);
+
+    // Carve maze independently on each island (rooms and corridors are pre-carved)
+    for (island, corridor_indices) in islands.iter().zip(island_corridor_indices.iter()) {
+        carve_island(&mut map, island, corridor_indices, width, height, rng);
+    }
 
     // Place doors connecting rooms to corridors
     place_doors(&mut map, &rooms, width, height, rng);
