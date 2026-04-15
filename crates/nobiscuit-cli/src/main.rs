@@ -13,7 +13,9 @@ use nobiscuit_engine::framebuffer::{Color, Framebuffer};
 use nobiscuit_engine::renderer;
 use nobiscuit_engine::sprite;
 
-use crate::game::{GameState, World, SPRITE_BISCUIT, SPRITE_GOAL, SPRITE_STAIRS_UP, SPRITE_STAIRS_DOWN};
+use crate::game::{
+    GameState, World, SPRITE_BISCUIT, SPRITE_GOAL, SPRITE_STAIRS_DOWN, SPRITE_STAIRS_UP,
+};
 use crate::input::{poll_input, GameInput};
 use crate::player::Player;
 use crate::terminal::TerminalRenderer;
@@ -22,7 +24,11 @@ const MAX_DEPTH: f64 = 20.0;
 const TARGET_FPS: u64 = 30;
 const FRAME_DURATION: Duration = Duration::from_millis(1000 / TARGET_FPS);
 
-const FLOOR_COLOR: Color = Color { r: 74, g: 60, b: 40 };
+const FLOOR_COLOR: Color = Color {
+    r: 74,
+    g: 60,
+    b: 40,
+};
 const CEILING_COLOR: Color = Color {
     r: 135,
     g: 206,
@@ -33,10 +39,10 @@ const NUM_FLOORS: usize = 3;
 
 fn sprite_color(sprite_type: u8) -> Color {
     match sprite_type {
-        SPRITE_BISCUIT => Color::rgb(220, 180, 80),     // golden biscuit
-        SPRITE_GOAL => Color::rgb(50, 220, 50),          // green exit
-        SPRITE_STAIRS_UP => Color::rgb(200, 150, 50),    // warm stairs up
-        SPRITE_STAIRS_DOWN => Color::rgb(150, 100, 30),  // dark stairs down
+        SPRITE_BISCUIT => Color::rgb(220, 180, 80), // golden biscuit
+        SPRITE_GOAL => Color::rgb(50, 220, 50),     // green exit
+        SPRITE_STAIRS_UP => Color::rgb(200, 150, 50), // warm stairs up
+        SPRITE_STAIRS_DOWN => Color::rgb(150, 100, 30), // dark stairs down
         _ => Color::rgb(255, 255, 255),
     }
 }
@@ -112,16 +118,12 @@ fn main() {
 
         let current_map = world.current_map();
         let num_rays = fb.width();
-        let rays = player.camera.cast_all_rays(current_map, num_rays, MAX_DEPTH);
+        let rays = player
+            .camera
+            .cast_all_rays(current_map, num_rays, MAX_DEPTH);
 
         // Floor and ceiling
-        floor::render_floor_ceiling(
-            &mut fb,
-            &rays,
-            FLOOR_COLOR,
-            CEILING_COLOR,
-            &player.camera,
-        );
+        floor::render_floor_ceiling(&mut fb, &rays, FLOOR_COLOR, CEILING_COLOR, &player.camera);
 
         // Walls
         renderer::render_walls(&mut fb, &rays, MAX_DEPTH);

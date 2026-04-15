@@ -45,7 +45,7 @@ cargo clippy                        # lint
 | main.rs | Game loop (input → update → render → present) |
 | terminal.rs | Half-block ANSI renderer with delta flushing |
 | input.rs | Non-blocking crossterm key polling |
-| maze.rs | DFS maze generation (iterative backtracking) |
+| maze.rs | Mask-based irregular maze generation (per-island DFS) |
 | player.rs | Grid-based Wizardry-style movement with animation |
 | minimap.rs | Semi-transparent 2D map overlay |
 | game.rs | Game state (hunger, biscuit pickup, escape) |
@@ -54,6 +54,7 @@ cargo clippy                        # lint
 ## Current features
 
 - Multi-floor maze (3 floors connected by stairs)
+- Irregular maze shapes (VOID tiles + mask-based generation, per-island DFS)
 - Window tiles (glass pane with wooden frame, distinct from walls)
 - Stair sprites (up/down arrows) with floor transition
 - Floor indicator HUD (e.g. "2F" with dot indicators)
@@ -61,7 +62,6 @@ cargo clippy                        # lint
 
 ## Future work
 
-- #3 Irregular maze shapes (VOID tiles + mask-based generation)
 - #4 Variable corridor width + room placement
 - #5 Doors (fusuma, kitchen, toilet, genkan)
 - #6 Minimap visibility restriction (item-based, limited uses)

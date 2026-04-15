@@ -1,4 +1,6 @@
-use nobiscuit_engine::map::{GridMap, TileMap, TILE_EMPTY, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP};
+use nobiscuit_engine::map::{
+    GridMap, TileMap, TILE_EMPTY, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP,
+};
 use nobiscuit_engine::sprite::Sprite;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -58,30 +60,30 @@ impl World {
         let tile = self.current_map().get(px, py)?;
 
         match tile {
-            TILE_STAIRS_UP if self.current_floor < self.floors.len() - 1 => {
-                Some(StairTransition {
-                    target_floor: self.current_floor + 1,
-                    direction: StairDirection::Up,
-                })
-            }
-            TILE_STAIRS_DOWN if self.current_floor > 0 => {
-                Some(StairTransition {
-                    target_floor: self.current_floor - 1,
-                    direction: StairDirection::Down,
-                })
-            }
+            TILE_STAIRS_UP if self.current_floor < self.floors.len() - 1 => Some(StairTransition {
+                target_floor: self.current_floor + 1,
+                direction: StairDirection::Up,
+            }),
+            TILE_STAIRS_DOWN if self.current_floor > 0 => Some(StairTransition {
+                target_floor: self.current_floor - 1,
+                direction: StairDirection::Down,
+            }),
             _ => None,
         }
     }
 
     /// Move player to a different floor. Returns the spawn position on the new floor.
+    ///
+    /// Scans the full map for the first matching stair tile. With multiple islands
+    /// per floor, the player may land on a different island than expected — this is
+    /// intentional, creating the "wandering between islands" exploration effect.
     pub fn change_floor(&mut self, target_floor: usize, direction: StairDirection) -> (f64, f64) {
         self.current_floor = target_floor;
 
-        // Find the matching stairs on the new floor
+        // Find the matching stairs on the new floor (first match wins)
         let target_tile = match direction {
-            StairDirection::Up => TILE_STAIRS_DOWN,   // came up, so land on down-stairs
-            StairDirection::Down => TILE_STAIRS_UP,   // went down, land on up-stairs
+            StairDirection::Up => TILE_STAIRS_DOWN, // came up, so land on down-stairs
+            StairDirection::Down => TILE_STAIRS_UP, // went down, land on up-stairs
         };
 
         let map = &self.floors[target_floor].map;
@@ -93,7 +95,14 @@ impl World {
             }
         }
 
-        // Fallback: start position
+        // Fallback: find any walkable cell
+        for y in 1..map.height() - 1 {
+            for x in 1..map.width() - 1 {
+                if map.get(x as i32, y as i32) == Some(TILE_EMPTY) {
+                    return (x as f64 + 0.5, y as f64 + 0.5);
+                }
+            }
+        }
         (1.5, 1.5)
     }
 }
@@ -171,8 +180,8 @@ fn place_floor_items(map: &dyn TileMap, is_ground_floor: bool, rng: &mut impl Rn
 
 pub struct GameState {
     pub show_minimap: bool,
-    pub hunger: f64,        // 1.0 = full, 0.0 = dead
-    pub hunger_drain: f64,  // per second
+    pub hunger: f64,       // 1.0 = full, 0.0 = dead
+    pub hunger_drain: f64, // per second
     pub biscuits_eaten: u32,
     pub is_alive: bool,
     pub escaped: bool,
@@ -227,8 +236,12 @@ impl GameState {
         if self.floor_transition.is_none() && !self.on_stair_tile {
             if let Some(transition) = world.check_stairs(player_x, player_y) {
                 let floor_name = match transition.direction {
-                    StairDirection::Up => format!("Going up to {}F...", transition.target_floor + 1),
-                    StairDirection::Down => format!("Going down to {}F...", transition.target_floor + 1),
+                    StairDirection::Up => {
+                        format!("Going up to {}F...", transition.target_floor + 1)
+                    }
+                    StairDirection::Down => {
+                        format!("Going down to {}F...", transition.target_floor + 1)
+                    }
                 };
                 self.message = Some((floor_name, 2.0));
                 self.floor_transition = Some(transition);

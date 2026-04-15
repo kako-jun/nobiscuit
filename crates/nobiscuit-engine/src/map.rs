@@ -6,6 +6,7 @@ pub const TILE_GOAL: u8 = 2;
 pub const TILE_WINDOW: u8 = 3;
 pub const TILE_STAIRS_UP: u8 = 4;
 pub const TILE_STAIRS_DOWN: u8 = 5;
+pub const TILE_VOID: u8 = 6;
 
 pub trait TileMap {
     fn width(&self) -> usize;

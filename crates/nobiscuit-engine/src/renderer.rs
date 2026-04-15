@@ -1,5 +1,5 @@
 use crate::framebuffer::{Color, Framebuffer};
-use crate::map::TILE_WINDOW;
+use crate::map::{TILE_VOID, TILE_WINDOW};
 use crate::ray::{HitSide, RayHit};
 
 /// Compute textured wall color for a given point on the wall surface.
@@ -73,7 +73,13 @@ fn wall_texture(wall_x: f64, wall_y: f64, side: HitSide, brightness: f64, tile_h
 ///
 /// Windows have a wooden frame around the edges and glass in the center.
 /// A cross-shaped mullion divides the glass into 4 panes.
-fn window_texture(wall_x: f64, wall_y: f64, side: HitSide, brightness: f64, tile_hash: u32) -> Color {
+fn window_texture(
+    wall_x: f64,
+    wall_y: f64,
+    side: HitSide,
+    brightness: f64,
+    tile_hash: u32,
+) -> Color {
     let frame_thickness = 0.12;
     let mullion_half = 0.02;
 
@@ -137,6 +143,11 @@ pub fn render_walls(fb: &mut Framebuffer, rays: &[Option<RayHit>], max_depth: f6
 
     for (col, ray) in rays.iter().enumerate() {
         let Some(hit) = ray else { continue };
+
+        // VOID tiles produce no visible wall — column stays black
+        if hit.tile == TILE_VOID {
+            continue;
+        }
 
         let distance = hit.distance.max(0.001);
         let wall_height = (fb_height / distance * WALL_HEIGHT_SCALE).min(fb_height);

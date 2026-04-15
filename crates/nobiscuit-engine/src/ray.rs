@@ -1,4 +1,4 @@
-use crate::map::TileMap;
+use crate::map::{TileMap, TILE_VOID};
 use crate::math::Vec2f;
 
 #[derive(Debug, Clone, Copy)]
@@ -18,12 +18,7 @@ pub struct RayHit {
 }
 
 /// Cast a single ray using DDA algorithm
-pub fn cast_ray(
-    map: &dyn TileMap,
-    origin: Vec2f,
-    angle: f64,
-    max_depth: f64,
-) -> Option<RayHit> {
+pub fn cast_ray(map: &dyn TileMap, origin: Vec2f, angle: f64, max_depth: f64) -> Option<RayHit> {
     let ray_dir_x = angle.cos();
     let ray_dir_y = angle.sin();
 
@@ -69,17 +64,35 @@ pub fn cast_ray(
         }
 
         // Check bounds
-        if map_x < 0
-            || map_y < 0
-            || map_x >= map.width() as i32
-            || map_y >= map.height() as i32
-        {
+        if map_x < 0 || map_y < 0 || map_x >= map.width() as i32 || map_y >= map.height() as i32 {
             return None;
         }
 
         // Check if we hit a solid tile
         if map.is_solid(map_x, map_y) {
             let tile = map.get(map_x, map_y).unwrap_or(1);
+
+            // VOID tiles are solid (impassable) but invisible — no wall drawn.
+            // Return a RayHit with TILE_VOID so renderers can distinguish VOID
+            // from max-depth misses and skip floor/ceiling rendering too.
+            if tile == TILE_VOID {
+                let perp_dist = match side {
+                    HitSide::Vertical => {
+                        (map_x as f64 - origin.x + (1.0 - step_x as f64) / 2.0) / ray_dir_x
+                    }
+                    HitSide::Horizontal => {
+                        (map_y as f64 - origin.y + (1.0 - step_y as f64) / 2.0) / ray_dir_y
+                    }
+                };
+                return Some(RayHit {
+                    distance: perp_dist,
+                    side,
+                    map_x,
+                    map_y,
+                    wall_x: 0.0,
+                    tile: TILE_VOID,
+                });
+            }
 
             // Compute perpendicular distance (avoids fisheye on its own,
             // but camera.rs applies additional fisheye correction)
