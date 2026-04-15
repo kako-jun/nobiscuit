@@ -81,7 +81,8 @@ const TILE_VOID: u8 = 6;
 |---|---|---|
 | Target FPS | 30 | Frame rate |
 | Max depth | 20.0 | Maximum ray distance |
-| Maze size | 31 x 25 | Tile grid dimensions |
+| Maze size | 15x13 ~ 121x91 | Determined by galagala spins |
+| Num floors | 1 ~ 12 | Determined by galagala spins |
 | FOV | 60° (π/3) | Field of view |
 | Move speed | 4.0 | Grid moves per second (animation) |
 | Turn speed | 6.0 | 90° turns per second (animation) |

@@ -64,9 +64,9 @@ cargo clippy                        # lint
 - Per-floor independent maze generation with biscuits
 - Minimap visibility restriction: fog of war, timed display (M key: 3s with hunger cost, biscuit: 2s full reveal), debug mode via NOBISCUIT_DEBUG=1
 - Game over/clear presentation: 3s fade-out, collapse animation (game over), staged title reveal (clear), score display, Y/N retry
+- Galagala opening: spin count determines maze size (15x13~121x91) and floors (1~12). Camera shake, color-coded spin counter, retry returns to galagala
 
 ## Future work
-- #8 Galagala opening sequence (difficulty selection + goal)
 - Movable walls/windows (home maze dynamic rearrangement)
 - Infinite maze (chunk-based generation)
 - Sound (terminal bell or external)

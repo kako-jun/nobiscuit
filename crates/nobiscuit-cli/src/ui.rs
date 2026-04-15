@@ -1,4 +1,5 @@
 use nobiscuit_engine::framebuffer::{Color, Framebuffer};
+use rand::Rng;
 
 const BAR_WIDTH: usize = 20;
 const BAR_HEIGHT: usize = 4;
@@ -198,6 +199,93 @@ fn render_centered_text(fb: &mut Framebuffer, text: &str, color: Color, y0: usiz
                     }
                 }
             }
+        }
+    }
+}
+
+/// Render the galagala (lottery machine) opening screen
+pub fn render_garagara_screen(fb: &mut Framebuffer, spins: u32, shake_timer: f64) {
+    fb.clear(Color::rgb(0, 0, 0));
+
+    // Draw spin count as large 3x-scaled digits in the center
+    let text = format!("{}", spins);
+    let scale = 3_usize;
+    let char_w = 4 * scale; // 3px * scale + scale gap
+    let char_h = 5 * scale;
+    let total_w = text.len() * char_w;
+    let x0 = fb.width().saturating_sub(total_w) / 2;
+    let y0 = fb.height().saturating_sub(char_h) / 2;
+
+    let digit_color = if spins == 0 {
+        Color::rgb(120, 120, 120)
+    } else if spins <= 4 {
+        Color::rgb(200, 200, 200)
+    } else if spins <= 10 {
+        Color::rgb(255, 200, 50)
+    } else {
+        Color::rgb(255, 80, 80)
+    };
+
+    for (ci, ch) in text.chars().enumerate() {
+        let bitmap = char_bitmap(ch);
+        let cx = x0 + ci * char_w;
+        for (row, bits) in bitmap.iter().enumerate() {
+            for col in 0..3_usize {
+                if bits & (1 << (2 - col)) != 0 {
+                    // Draw a scale x scale block for each pixel
+                    for sy in 0..scale {
+                        for sx in 0..scale {
+                            let px = cx + col * scale + sx;
+                            let py = y0 + row * scale + sy;
+                            if px < fb.width() && py < fb.height() {
+                                fb.set_pixel(px, py, digit_color);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Instruction text at the bottom
+    let prompt = if spins == 0 {
+        "Press any key to spin"
+    } else {
+        "Press any key to spin / Enter to start"
+    };
+    let prompt_color = Color::rgb(160, 160, 160);
+    let prompt_y = fb.height().saturating_sub(12);
+    render_centered_text(fb, prompt, prompt_color, prompt_y);
+
+    // Camera shake: shift pixels randomly by ±2 when shake_timer > 0
+    if shake_timer > 0.0 {
+        let mut rng = rand::thread_rng();
+        let dx: i32 = rng.gen_range(-2..=2);
+        let dy: i32 = rng.gen_range(-2..=2);
+        shift_framebuffer(fb, dx, dy);
+    }
+}
+
+/// Shift all pixels in the framebuffer by (dx, dy), filling gaps with black.
+// TODO: reuse temp buffer instead of allocating every frame (called ~9 times per shake)
+fn shift_framebuffer(fb: &mut Framebuffer, dx: i32, dy: i32) {
+    let w = fb.width();
+    let h = fb.height();
+    // Read all pixels into a temp buffer
+    let mut tmp = vec![Color::rgb(0, 0, 0); w * h];
+    for y in 0..h {
+        for x in 0..w {
+            let sx = x as i32 - dx;
+            let sy = y as i32 - dy;
+            if sx >= 0 && sx < w as i32 && sy >= 0 && sy < h as i32 {
+                tmp[y * w + x] = fb.get_pixel(sx as usize, sy as usize);
+            }
+        }
+    }
+    // Write back
+    for y in 0..h {
+        for x in 0..w {
+            fb.set_pixel(x, y, tmp[y * w + x]);
         }
     }
 }
