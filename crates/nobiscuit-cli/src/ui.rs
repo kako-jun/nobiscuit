@@ -128,7 +128,7 @@ pub fn render_message(fb: &mut Framebuffer, text: &str, color: Color) {
 pub fn render_game_over_screen(fb: &mut Framebuffer, timer: f64) {
     let color = Color::rgb(255, 80, 80);
     if timer >= 0.0 {
-        render_centered_text(fb, "You starved...", color, fb.height() / 2 - 4);
+        render_centered_text(fb, "You can no longer move...", color, fb.height() / 2 - 4);
     }
     if timer >= 3.0 {
         render_retry_prompt(fb);
