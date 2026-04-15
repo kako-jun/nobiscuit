@@ -849,17 +849,30 @@ fn place_windows_and_shoji(map: &mut GridMap, width: usize, height: usize, rng: 
 /// walkable cells (EMPTY, GOAL, stairs). This causes rays from playable areas
 /// to reach VOID, rendering black lines/areas inside rooms and corridors.
 /// Converting these boundary VOID cells to WALL prevents the visual artifact.
+/// Uses 8-directional neighbor checks (including diagonals) because DDA rays
+/// can step diagonally through cell corners, reaching a diagonally adjacent VOID.
 fn seal_void_boundaries(map: &mut GridMap, width: usize, height: usize) {
+    const DIRS8: [(i32, i32); 8] = [
+        (1, 0),
+        (-1, 0),
+        (0, 1),
+        (0, -1),
+        (1, 1),
+        (1, -1),
+        (-1, 1),
+        (-1, -1),
+    ];
+
     // Collect cells to convert (avoid mutating while iterating)
     let mut to_wall: Vec<(usize, usize)> = Vec::new();
 
+    // Outer ring is always WALL (never VOID), so skip edges
     for y in 1..height - 1 {
         for x in 1..width - 1 {
             if map.get(x as i32, y as i32) != Some(TILE_VOID) {
                 continue;
             }
-            // Check if any 4-directional neighbor is non-solid (walkable)
-            let has_walkable_neighbor = DIRS4.iter().any(|&(dx, dy)| {
+            let has_walkable_neighbor = DIRS8.iter().any(|&(dx, dy)| {
                 let nx = x as i32 + dx;
                 let ny = y as i32 + dy;
                 !map.is_solid(nx, ny)
