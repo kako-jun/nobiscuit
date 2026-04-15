@@ -13,6 +13,8 @@ pub fn render_minimap(
     player_x: f64,
     player_y: f64,
     player_angle: f64,
+    visited: &[Vec<bool>],
+    reveal_all: bool,
 ) {
     let map_pixel_w = map.width() * MINIMAP_SCALE;
     let map_pixel_h = map.height() * MINIMAP_SCALE;
@@ -28,6 +30,15 @@ pub fn render_minimap(
 
             // VOID tiles are not drawn on the minimap (stay black)
             if tile == TILE_VOID {
+                continue;
+            }
+
+            // Fog of war: skip unvisited tiles unless reveal_all is active
+            if !reveal_all
+                && my < visited.len()
+                && mx < visited.get(my).map_or(0, |row| row.len())
+                && !visited[my][mx]
+            {
                 continue;
             }
 

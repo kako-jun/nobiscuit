@@ -197,12 +197,21 @@ pub struct GameState {
     on_stair_tile: bool,
     /// Doors that are currently open: (x, y) -> original door tile type
     open_doors: HashMap<(usize, usize), u8>,
+    /// Remaining seconds for timed minimap display. <= 0 means hidden.
+    pub minimap_timer: f64,
+    /// True during biscuit reveal-all flash (fog of war ignored)
+    pub minimap_reveal_all: bool,
+    /// Fog of war: visited[floor][y][x]
+    pub visited: Vec<Vec<Vec<bool>>>,
+    /// Debug mode (NOBISCUIT_DEBUG=1): constant minimap toggle, no fog of war
+    pub debug_mode: bool,
 }
 
 impl GameState {
     pub fn new() -> Self {
+        let debug_mode = std::env::var("NOBISCUIT_DEBUG").is_ok();
         Self {
-            show_minimap: true,
+            show_minimap: debug_mode, // visible by default only in debug
             hunger: 1.0,
             hunger_drain: 0.02, // ~50 seconds to starve
             biscuits_eaten: 0,
@@ -212,6 +221,59 @@ impl GameState {
             floor_transition: None,
             on_stair_tile: false,
             open_doors: HashMap::new(),
+            minimap_timer: 0.0,
+            minimap_reveal_all: false,
+            visited: Vec::new(),
+            debug_mode,
+        }
+    }
+
+    /// Initialize fog of war grid from world dimensions
+    pub fn init_visited(&mut self, world: &World) {
+        self.visited = world
+            .floors
+            .iter()
+            .map(|floor| {
+                vec![vec![false; floor.map.width()]; floor.map.height()]
+            })
+            .collect();
+    }
+
+    /// Mark tiles around the player position as visited (±1 range)
+    pub fn update_visited(
+        &mut self,
+        floor: usize,
+        px: usize,
+        py: usize,
+        map_w: usize,
+        map_h: usize,
+    ) {
+        if floor >= self.visited.len() {
+            return;
+        }
+        let visited_floor = &mut self.visited[floor];
+        for dy in 0..=2_usize {
+            for dx in 0..=2_usize {
+                let vx = (px + dx).saturating_sub(1);
+                let vy = (py + dy).saturating_sub(1);
+                if vx < map_w && vy < map_h {
+                    visited_floor[vy][vx] = true;
+                }
+            }
+        }
+    }
+
+    /// Activate minimap on M key press.
+    /// Debug mode: classic toggle (no cost, no timer).
+    /// Normal mode: timed display (3s) with hunger cost.
+    pub fn activate_minimap(&mut self) {
+        if self.debug_mode {
+            self.show_minimap = !self.show_minimap;
+        } else {
+            self.hunger = (self.hunger - 0.03).max(0.0);
+            self.minimap_timer = 3.0;
+            self.minimap_reveal_all = false;
+            self.show_minimap = true;
         }
     }
 
@@ -243,6 +305,16 @@ impl GameState {
             self.is_alive = false;
             self.message = Some(("You starved...".to_string(), 5.0));
             return;
+        }
+
+        // Minimap timer (normal mode only)
+        if !self.debug_mode && self.minimap_timer > 0.0 {
+            self.minimap_timer -= dt;
+            if self.minimap_timer <= 0.0 {
+                self.minimap_timer = 0.0;
+                self.show_minimap = false;
+                self.minimap_reveal_all = false;
+            }
         }
 
         // Auto-open doors adjacent to player
@@ -324,6 +396,12 @@ impl GameState {
                 self.biscuits_eaten += 1;
                 self.hunger = (self.hunger + 0.15).min(1.0);
                 self.message = Some(("*crunch*".to_string(), 1.0));
+                // Biscuit reveal flash: show full map for 2 seconds
+                if !self.debug_mode {
+                    self.minimap_timer = 2.0;
+                    self.minimap_reveal_all = true;
+                    self.show_minimap = true;
+                }
             } else if dist < pickup_dist && s.sprite_type == SPRITE_GOAL {
                 self.escaped = true;
                 self.message = Some(("Escaped! ...no biscuit.".to_string(), 10.0));
