@@ -241,6 +241,10 @@ fn find_islands(mask: &[bool], width: usize, height: usize) -> Vec<Vec<(usize, u
 /// Rooms have interior sizes ranging from 2×2 to 4×3. They are placed so that
 /// all interior cells fall within the mask (not VOID) and do not overlap
 /// existing room interiors. Rooms may be adjacent with only a wall between them.
+///
+/// Room coordinates are not restricted to odd positions — both odd and even cells
+/// are set to TILE_EMPTY. DFS connection works via odd-coordinate nodes inside
+/// the room (pre-carved in `carve_island`), which then bridge to adjacent corridors.
 fn place_rooms(
     map: &mut GridMap,
     mask: &[bool],
