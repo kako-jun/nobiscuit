@@ -220,6 +220,16 @@ impl GameState {
         self.on_stair_tile = true;
     }
 
+    /// Restore all open doors on the current floor and clear the tracking map.
+    /// Must be called before changing floors to avoid corrupting the new floor's map.
+    pub fn restore_all_doors(&mut self, world: &mut World) {
+        for ((x, y), original_tile) in self.open_doors.drain() {
+            if world.current_map().get(x as i32, y as i32) == Some(TILE_EMPTY) {
+                world.current_map_mut().set(x, y, original_tile);
+            }
+        }
+    }
+
     /// Update hunger, check biscuit pickup, check goal, check stairs
     pub fn update(&mut self, world: &mut World, player_x: f64, player_y: f64, dt: f64) {
         if !self.is_alive || self.escaped {

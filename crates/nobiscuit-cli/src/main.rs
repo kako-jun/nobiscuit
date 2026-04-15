@@ -93,6 +93,8 @@ fn main() {
 
             // Handle floor transition
             if let Some(transition) = state.floor_transition.take() {
+                // Restore all open doors on the current floor before switching
+                state.restore_all_doors(&mut world);
                 let (nx, ny) = world.change_floor(transition.target_floor, transition.direction);
                 player.teleport(nx, ny);
                 state.mark_on_stair();

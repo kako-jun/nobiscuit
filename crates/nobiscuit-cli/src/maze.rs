@@ -20,10 +20,30 @@ const MAX_OPEN_AREA: usize = 12;
 
 /// A placed room (interior coordinates in map space).
 pub struct Room {
-    x: usize, // left column of interior
-    y: usize, // top row of interior
-    w: usize, // interior width
-    h: usize, // interior height
+    pub x: usize, // left column of interior
+    pub y: usize, // top row of interior
+    pub w: usize, // interior width
+    pub h: usize, // interior height
+}
+
+/// Check if a cell (cx, cy) is on the border of any room (the wall cells
+/// immediately surrounding a room's interior).
+fn is_room_border(rooms: &[Room], cx: usize, cy: usize) -> bool {
+    for r in rooms {
+        // Room border: one cell outside the interior in each direction
+        let bx0 = r.x.saturating_sub(1);
+        let by0 = r.y.saturating_sub(1);
+        let bx1 = r.x + r.w; // one past right edge
+        let by1 = r.y + r.h; // one past bottom edge
+        if cx >= bx0 && cx <= bx1 && cy >= by0 && cy <= by1 {
+            // Inside the border rectangle but not inside the interior
+            let in_interior = cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
+            if !in_interior {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// Compute the flat index for a DFS node at odd coordinates (x, y).
@@ -343,12 +363,14 @@ fn flood_fill_count(map: &GridMap, width: usize, height: usize, sx: usize, sy: u
 /// Widen some corridors by selectively removing walls.
 ///
 /// Candidate walls are interior TILE_WALL cells adjacent to 2+ TILE_EMPTY cells.
+/// Room border walls are excluded to preserve the corridor-hub structure.
 /// A subset of candidates is processed: each wall is tentatively removed and
 /// a flood fill checks whether the resulting open area exceeds MAX_OPEN_AREA.
 /// If it does, the wall is restored.
 fn widen_corridors(
     map: &mut GridMap,
     mask: &[bool],
+    rooms: &[Room],
     width: usize,
     height: usize,
     rng: &mut impl Rng,
@@ -361,6 +383,10 @@ fn widen_corridors(
                 continue;
             }
             if map.get(x as i32, y as i32) != Some(TILE_WALL) {
+                continue;
+            }
+            // Skip room border walls to preserve corridor-hub structure
+            if is_room_border(rooms, x, y) {
                 continue;
             }
             // Count adjacent empty cells
@@ -509,7 +535,7 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (GridMa
     }
 
     // Widen some corridors by selectively removing walls
-    widen_corridors(&mut map, &mask, width, height, rng);
+    widen_corridors(&mut map, &mask, &rooms, width, height, rng);
 
     // Place doors connecting rooms to corridors
     place_doors(&mut map, &rooms, width, height, rng);
@@ -642,7 +668,30 @@ fn place_doors(map: &mut GridMap, rooms: &[Room], width: usize, height: usize, r
         }
 
         if candidates.is_empty() {
-            continue;
+            // No corridor-facing wall found. Force-open a wall to prevent
+            // the room from being completely isolated (unreachable).
+            // Find any wall cell on the room border and break it open.
+            let mut fallback: Vec<(usize, usize)> = Vec::new();
+            let bx0 = room.x.saturating_sub(1);
+            let by0 = room.y.saturating_sub(1);
+            let bx1 = room.x + room.w;
+            let by1 = room.y + room.h;
+            for fy in by0..=by1 {
+                for fx in bx0..=bx1 {
+                    let in_interior = fx >= room.x
+                        && fx < room.x + room.w
+                        && fy >= room.y
+                        && fy < room.y + room.h;
+                    if !in_interior && map.get(fx as i32, fy as i32) == Some(TILE_WALL) {
+                        fallback.push((fx, fy));
+                    }
+                }
+            }
+            if fallback.is_empty() {
+                continue;
+            }
+            fallback.shuffle(rng);
+            candidates.push(fallback[0]);
         }
 
         candidates.shuffle(rng);
