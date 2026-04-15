@@ -1,9 +1,11 @@
 use nobiscuit_engine::map::{
-    GridMap, TileMap, TILE_EMPTY, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP,
+    GridMap, TileMap, TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET,
+    TILE_EMPTY, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP,
 };
 use nobiscuit_engine::sprite::Sprite;
 use rand::seq::SliceRandom;
 use rand::Rng;
+use std::collections::HashMap;
 
 use crate::maze;
 
@@ -43,6 +45,10 @@ impl World {
 
     pub fn current_map(&self) -> &GridMap {
         &self.floors[self.current_floor].map
+    }
+
+    pub fn current_map_mut(&mut self) -> &mut GridMap {
+        &mut self.floors[self.current_floor].map
     }
 
     pub fn current_sprites(&self) -> &[Sprite] {
@@ -189,6 +195,8 @@ pub struct GameState {
     pub floor_transition: Option<StairTransition>,
     /// Prevent stair re-trigger: true while player is still on the stair tile they arrived on
     on_stair_tile: bool,
+    /// Doors that are currently open: (x, y) -> original door tile type
+    open_doors: HashMap<(usize, usize), u8>,
 }
 
 impl GameState {
@@ -203,12 +211,23 @@ impl GameState {
             message: None,
             floor_transition: None,
             on_stair_tile: false,
+            open_doors: HashMap::new(),
         }
     }
 
     /// Called after a floor transition completes to arm the bounce guard
     pub fn mark_on_stair(&mut self) {
         self.on_stair_tile = true;
+    }
+
+    /// Restore all open doors on the current floor and clear the tracking map.
+    /// Must be called before changing floors to avoid corrupting the new floor's map.
+    pub fn restore_all_doors(&mut self, world: &mut World) {
+        for ((x, y), original_tile) in self.open_doors.drain() {
+            if world.current_map().get(x as i32, y as i32) == Some(TILE_EMPTY) {
+                world.current_map_mut().set(x, y, original_tile);
+            }
+        }
     }
 
     /// Update hunger, check biscuit pickup, check goal, check stairs
@@ -224,6 +243,47 @@ impl GameState {
             self.is_alive = false;
             self.message = Some(("You starved...".to_string(), 5.0));
             return;
+        }
+
+        // Auto-open doors adjacent to player
+        let px_i = player_x as usize;
+        let py_i = player_y as usize;
+        let door_tiles = [
+            TILE_DOOR_FUSUMA,
+            TILE_DOOR_KITCHEN,
+            TILE_DOOR_TOILET,
+            TILE_DOOR_GENKAN,
+        ];
+        for &(dx, dy) in &[(1i32, 0i32), (-1, 0), (0, 1), (0, -1)] {
+            let nx = px_i as i32 + dx;
+            let ny = py_i as i32 + dy;
+            if let Some(tile) = world.current_map().get(nx, ny) {
+                if door_tiles.contains(&tile) {
+                    let pos = (nx as usize, ny as usize);
+                    self.open_doors.insert(pos, tile);
+                    world.current_map_mut().set(pos.0, pos.1, TILE_EMPTY);
+                }
+            }
+        }
+
+        // Auto-close doors that are far from player (manhattan distance >= 3)
+        let close_list: Vec<(usize, usize)> = self
+            .open_doors
+            .keys()
+            .filter(|&&(dx, dy)| {
+                let dist = (dx as i32 - px_i as i32).unsigned_abs()
+                    + (dy as i32 - py_i as i32).unsigned_abs();
+                dist >= 3
+            })
+            .copied()
+            .collect();
+        for pos in close_list {
+            if let Some(original_tile) = self.open_doors.remove(&pos) {
+                // Only restore if the cell is still empty (no sprite/item placed there)
+                if world.current_map().get(pos.0 as i32, pos.1 as i32) == Some(TILE_EMPTY) {
+                    world.current_map_mut().set(pos.0, pos.1, original_tile);
+                }
+            }
         }
 
         // Check stairs (with bounce guard)

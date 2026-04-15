@@ -109,8 +109,14 @@ const TILE_VOID: u8 = 6;
 | 4 | TILE_STAIRS_UP | No | Stairs to upper floor |
 | 5 | TILE_STAIRS_DOWN | No | Stairs to lower floor |
 | 6 | TILE_VOID | Yes* | Non-existent cell (not wall, not floor). Rays return `Some(RayHit{tile: TILE_VOID})` — no wall, floor, or ceiling drawn (column stays black) |
+| 7 | TILE_DOOR_FUSUMA | Yes** | Fusuma (sliding paper door). White washi + metal pull |
+| 8 | TILE_DOOR_KITCHEN | Yes** | Kitchen door. Wood grain + doorknob |
+| 9 | TILE_DOOR_TOILET | Yes** | Toilet door. Dark wood + frosted glass window |
+| 10 | TILE_DOOR_GENKAN | Yes** | Entrance door. Heavy dark wood + panel grooves |
 
 \* VOID is solid for movement (impassable). Raycasting returns a special hit that suppresses all rendering for that column.
+
+\*\* Doors are solid when closed. Auto-open when player is adjacent, auto-close when player moves away (manhattan distance >= 3).
 
 ## Sprite Types
 
