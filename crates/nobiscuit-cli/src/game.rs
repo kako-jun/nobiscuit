@@ -24,6 +24,8 @@ pub struct MazeParams {
 
 pub fn maze_params_from_spins(spins: u32) -> MazeParams {
     match spins {
+        // 0 spins should not happen (confirm at 0 increments instead),
+        // but handled defensively as the smallest maze
         0..=2 => MazeParams {
             width: 15,
             height: 13,

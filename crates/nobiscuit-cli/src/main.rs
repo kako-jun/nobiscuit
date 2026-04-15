@@ -66,9 +66,6 @@ fn main() {
         shake_timer: 0.0,
     };
 
-    // These track the current maze parameters (set after galagara)
-    let mut num_floors: usize = 1;
-
     let mut last_frame = Instant::now();
 
     loop {
@@ -92,7 +89,6 @@ fn main() {
                     Some(GameInput::Confirm) if *spins > 0 => {
                         // Confirm: generate the real world from spin count
                         let params = game::maze_params_from_spins(*spins);
-                        num_floors = params.num_floors;
                         world = World::new(params.num_floors, params.width, params.height, &mut rng);
                         player = Player::new(1.5, 1.5);
                         state = GameState::new();
@@ -182,7 +178,6 @@ fn main() {
                                         spins: 0,
                                         shake_timer: 0.0,
                                     };
-                                    num_floors = 1;
                                     continue;
                                 }
                                 Some(GameInput::Quit) | Some(GameInput::Decline) => break,
@@ -214,7 +209,7 @@ fn main() {
 
         match state.phase {
             GamePhase::GaragaraStart { spins, shake_timer } => {
-                ui::render_galagara_screen(&mut fb, spins, shake_timer);
+                ui::render_garagara_screen(&mut fb, spins, shake_timer);
             }
             GamePhase::Playing => {
                 match state.ending_phase {
@@ -298,7 +293,7 @@ fn main() {
                             ui::render_floor_indicator(
                                 &mut fb,
                                 world.current_floor + 1,
-                                num_floors,
+                                world.floors.len(),
                             );
                         }
 

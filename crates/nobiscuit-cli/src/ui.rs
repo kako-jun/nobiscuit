@@ -204,7 +204,7 @@ fn render_centered_text(fb: &mut Framebuffer, text: &str, color: Color, y0: usiz
 }
 
 /// Render the galagala (lottery machine) opening screen
-pub fn render_galagara_screen(fb: &mut Framebuffer, spins: u32, shake_timer: f64) {
+pub fn render_garagara_screen(fb: &mut Framebuffer, spins: u32, shake_timer: f64) {
     fb.clear(Color::rgb(0, 0, 0));
 
     // Draw spin count as large 3x-scaled digits in the center
@@ -266,7 +266,8 @@ pub fn render_galagara_screen(fb: &mut Framebuffer, spins: u32, shake_timer: f64
     }
 }
 
-/// Shift all pixels in the framebuffer by (dx, dy), filling gaps with black
+/// Shift all pixels in the framebuffer by (dx, dy), filling gaps with black.
+// TODO: reuse temp buffer instead of allocating every frame (called ~9 times per shake)
 fn shift_framebuffer(fb: &mut Framebuffer, dx: i32, dy: i32) {
     let w = fb.width();
     let h = fb.height();
@@ -290,7 +291,7 @@ fn shift_framebuffer(fb: &mut Framebuffer, dx: i32, dy: i32) {
 }
 
 /// 3x5 bitmap font — returns 5 rows, each row is 3 bits (MSB = left)
-pub fn char_bitmap(c: char) -> [u8; 5] {
+fn char_bitmap(c: char) -> [u8; 5] {
     match c.to_ascii_uppercase() {
         'A' => [0b010, 0b101, 0b111, 0b101, 0b101],
         'B' => [0b110, 0b101, 0b110, 0b101, 0b110],
