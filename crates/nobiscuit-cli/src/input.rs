@@ -7,6 +7,7 @@ pub enum GameInput {
     TurnLeft,
     TurnRight,
     ToggleMinimap,
+    Retry,
     Quit,
 }
 
@@ -35,7 +36,11 @@ pub fn poll_input(timeout: Duration) -> Option<GameInput> {
                     ..
                 } => Some(GameInput::ToggleMinimap),
                 KeyEvent {
-                    code: KeyCode::Char('q'),
+                    code: KeyCode::Char('y'),
+                    ..
+                } => Some(GameInput::Retry),
+                KeyEvent {
+                    code: KeyCode::Char('n') | KeyCode::Char('q'),
                     ..
                 } => Some(GameInput::Quit),
                 KeyEvent {
