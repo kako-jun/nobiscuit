@@ -18,6 +18,6 @@ name = "nobiscuit"
 path = "src/main.rs"
 
 [dependencies]
-nobiscuit-engine = { workspace = true }
+termray = { workspace = true }
 crossterm = { workspace = true }
 rand = { workspace = true }

@@ -1,7 +1,9 @@
-use nobiscuit_engine::map::{
-    GridMap, TileMap, TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET,
-    TILE_EMPTY, TILE_GOAL, TILE_SHOJI, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL,
-    TILE_WINDOW,
+use termray::TileMap;
+
+use crate::nobiscuit_map::NobiscuitMap;
+use crate::tiles::{
+    TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_EMPTY, TILE_GOAL,
+    TILE_SHOJI, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL, TILE_WINDOW,
 };
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -244,7 +246,7 @@ fn find_islands(mask: &[bool], width: usize, height: usize) -> Vec<Vec<(usize, u
 /// are set to TILE_EMPTY. DFS connection works via odd-coordinate nodes inside
 /// the room (pre-carved in `carve_island`), which then bridge to adjacent corridors.
 fn place_rooms(
-    map: &mut GridMap,
+    map: &mut NobiscuitMap,
     mask: &[bool],
     corridor_cells: &[(usize, usize)],
     width: usize,
@@ -369,7 +371,7 @@ fn place_rooms(
 /// set of cells that form the corridor (for room placement adjacency checks)
 /// and the set of DFS node indices that are pre-carved (corridor nodes).
 fn generate_corridors(
-    map: &mut GridMap,
+    map: &mut NobiscuitMap,
     island_nodes: &[(usize, usize)],
     mask: &[bool],
     width: usize,
@@ -491,7 +493,7 @@ fn generate_corridors(
 /// The maze is carved in-place on `map`. Only nodes within the island's mask
 /// are considered valid neighbors.
 fn carve_island(
-    map: &mut GridMap,
+    map: &mut NobiscuitMap,
     island_nodes: &[(usize, usize)],
     corridor_node_indices: &[usize],
     width: usize,
@@ -571,12 +573,12 @@ fn carve_island(
 /// Generate a maze with irregular shape using mask-based generation.
 ///
 /// Both `width` and `height` must be odd numbers (the algorithm steps by 2).
-pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (GridMap, Vec<Room>) {
+pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (NobiscuitMap, Vec<Room>) {
     assert!(
         width % 2 == 1 && height % 2 == 1,
         "maze dimensions must be odd"
     );
-    let mut map = GridMap::new(width, height);
+    let mut map = NobiscuitMap::new(width, height);
 
     // Generate mask for this floor's shape
     let mask = generate_mask(width, height, rng);
@@ -659,7 +661,13 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (GridMa
 /// - Small (2x2): toilet door
 ///
 /// One room on the top floor (closest to goal) gets a genkan door.
-fn place_doors(map: &mut GridMap, rooms: &[Room], width: usize, height: usize, rng: &mut impl Rng) {
+fn place_doors(
+    map: &mut NobiscuitMap,
+    rooms: &[Room],
+    width: usize,
+    height: usize,
+    rng: &mut impl Rng,
+) {
     if rooms.is_empty() {
         return;
     }
@@ -807,7 +815,12 @@ fn place_doors(map: &mut GridMap, rooms: &[Room], width: usize, height: usize, r
 /// Convert some interior walls into windows or shoji.
 /// A wall becomes a candidate if it has at least one empty neighbor
 /// (it's visible from a corridor). ~15% of candidates are converted; ~30% become shoji, rest windows.
-fn place_windows_and_shoji(map: &mut GridMap, width: usize, height: usize, rng: &mut impl Rng) {
+fn place_windows_and_shoji(
+    map: &mut NobiscuitMap,
+    width: usize,
+    height: usize,
+    rng: &mut impl Rng,
+) {
     let mut candidates: Vec<(usize, usize)> = Vec::new();
 
     // Skip outer border (row/col 0 and last)
@@ -850,7 +863,7 @@ fn place_windows_and_shoji(map: &mut GridMap, width: usize, height: usize, rng: 
 /// Converting these boundary VOID cells to WALL prevents the visual artifact.
 /// Uses 8-directional neighbor checks (including diagonals) because DDA rays
 /// can step diagonally through cell corners, reaching a diagonally adjacent VOID.
-fn seal_void_boundaries(map: &mut GridMap, width: usize, height: usize) {
+fn seal_void_boundaries(map: &mut NobiscuitMap, width: usize, height: usize) {
     const DIRS8: [(i32, i32); 8] = [
         (1, 0),
         (-1, 0),
@@ -911,7 +924,7 @@ pub fn generate_floor(
     floor_index: usize,
     total_floors: usize,
     rng: &mut impl Rng,
-) -> GridMap {
+) -> NobiscuitMap {
     let is_top_floor = floor_index == total_floors - 1;
     let (mut map, rooms) = generate_maze(width, height, rng);
 

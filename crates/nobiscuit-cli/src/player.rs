@@ -1,5 +1,4 @@
-use nobiscuit_engine::camera::Camera;
-use nobiscuit_engine::map::TileMap;
+use termray::{Camera, TileMap};
 
 use crate::input::GameInput;
 

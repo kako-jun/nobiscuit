@@ -1,7 +1,8 @@
-use nobiscuit_engine::framebuffer::{Color, Framebuffer};
-use nobiscuit_engine::map::{
-    TileMap, TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_GOAL,
-    TILE_SHOJI, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL, TILE_WINDOW,
+use termray::{Color, Framebuffer, TileMap};
+
+use crate::tiles::{
+    TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_GOAL, TILE_SHOJI,
+    TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL, TILE_WINDOW,
 };
 
 const MINIMAP_SCALE: usize = 2;

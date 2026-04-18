@@ -1,5 +1,5 @@
-use nobiscuit_engine::framebuffer::{Color, Framebuffer};
 use rand::Rng;
+use termray::{Color, Framebuffer};
 
 const BAR_WIDTH: usize = 20;
 const BAR_HEIGHT: usize = 4;

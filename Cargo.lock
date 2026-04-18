@@ -101,16 +101,12 @@ dependencies = [
 
 [[package]]
 name = "nobiscuit-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "crossterm",
- "nobiscuit-engine",
  "rand",
+ "termray",
 ]
-
-[[package]]
-name = "nobiscuit-engine"
-version = "0.1.0"
 
 [[package]]
 name = "parking_lot"
@@ -267,6 +263,12 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
+
+[[package]]
+name = "termray"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6cf5a8d42b7056286add682f1f9bab7e35bfc159f86c98f687d95b3151d04550"
 
 [[package]]
 name = "unicode-ident"

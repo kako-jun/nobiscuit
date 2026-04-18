@@ -6,16 +6,18 @@ TUI raycasting 3D maze game. Rust + crossterm. Half-block character rendering (`
 
 ## Architecture
 
-2-crate workspace:
-- `nobiscuit-engine` — Pure raycasting engine. Zero external dependencies. Renders to abstract `Framebuffer` (Color pixel grid). Designed for reuse by gemma-mon.
-- `nobiscuit-cli` — Game binary. Terminal rendering, input, maze generation, game state.
+Single-crate workspace depending on the external [`termray`](https://github.com/kako-jun/termray) crate:
+- `nobiscuit-cli` — Game binary. Terminal rendering, input, maze generation, game state. Plus nobiscuit-specific `NobiscuitMap`, `NobiscuitTextures` (wall/floor/sprite art) and tile IDs layered on top of termray.
+
+termray (extracted from the former `nobiscuit-engine`) owns the generic raycasting: DDA, camera, framebuffer, TileMap trait, wall/floor/sprite rendering skeletons. nobiscuit injects Japanese-house visuals through `WallTexturer` / `FloorTexturer` / `SpriteArt` trait impls.
 
 ## Key concepts
 
-- **Framebuffer**: Engine writes `Color` pixels to a width x height buffer. Height = terminal rows * 2 (half-block doubles vertical resolution).
+- **Framebuffer**: termray writes `Color` pixels to a width x height buffer. Height = terminal rows * 2 (half-block doubles vertical resolution).
 - **DDA raycasting**: One ray per screen column. Grid traversal to find wall hits. Fisheye correction applied by camera.
 - **Delta flushing**: Terminal renderer double-buffers. Only changed cells emit ANSI escape sequences. Critical for 30fps.
-- **TileMap trait**: Engine operates on `&dyn TileMap`. Game provides concrete implementation (`GridMap` from maze generation).
+- **TileMap trait**: termray operates on `&dyn TileMap`. nobiscuit provides `NobiscuitMap` with custom `is_solid` (goals and stairs are walkable; doors/windows/shoji are solid).
+- **Trait-based textures**: `NobiscuitTextures` implements termray's `WallTexturer`, `FloorTexturer`, and `SpriteArt`. All Japanese-house styling lives in `crates/nobiscuit-cli/src/textures.rs`.
 
 ## Build & run
 
@@ -26,18 +28,6 @@ cargo clippy                        # lint
 ```
 
 ## Module map
-
-### Engine (crates/nobiscuit-engine/src/)
-| File | Purpose |
-|---|---|
-| math.rs | Vec2f, angle normalization |
-| ray.rs | DDA raycasting algorithm |
-| map.rs | TileMap trait + GridMap implementation |
-| camera.rs | Camera position/angle, cast_all_rays |
-| renderer.rs | Wall column rendering with procedural textures |
-| floor.rs | Floor/ceiling with perspective-correct tile patterns |
-| framebuffer.rs | Color + pixel buffer + alpha blending |
-| sprite.rs | Sprite projection + AA art rendering |
 
 ### CLI (crates/nobiscuit-cli/src/)
 | File | Purpose |
@@ -50,6 +40,12 @@ cargo clippy                        # lint
 | minimap.rs | Semi-transparent 2D map overlay |
 | game.rs | Game state (hunger, biscuit pickup, escape) |
 | ui.rs | HUD (hunger bar, bitmap font messages) |
+| tiles.rs | Nobiscuit tile IDs (GOAL, WINDOW, STAIRS, DOORS, SHOJI) |
+| nob_map.rs | NobiscuitMap: TileMap impl with nobiscuit-aware is_solid |
+| textures.rs | WallTexturer / FloorTexturer / SpriteArt implementations (fusuma/shoji/tatami/biscuit) |
+
+### External engine
+Raycasting primitives live in the [termray](https://github.com/kako-jun/termray) crate (extracted from the former `nobiscuit-engine`).
 
 ## Current features
 
@@ -67,6 +63,8 @@ cargo clippy                        # lint
 - Galagala opening: spin count determines maze size (15x13~121x91) and floors (1~12). Camera shake, color-coded spin counter, retry returns to galagala
 
 ## Future work
+- Publish termray 0.1.0 to crates.io and drop the `path = "../../2026/termray"` workspace dep
+- Flatten single-crate workspace (rename `nobiscuit-cli` → `nobiscuit`, drop `crates/`)
 - Movable walls/windows (home maze dynamic rearrangement)
 - Infinite maze (chunk-based generation)
 - Sound (terminal bell or external)

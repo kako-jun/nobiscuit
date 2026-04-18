@@ -1,8 +1,10 @@
-use nobiscuit_engine::map::{
-    GridMap, TileMap, TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET,
-    TILE_EMPTY, TILE_GOAL, TILE_STAIRS_DOWN, TILE_STAIRS_UP,
+use termray::{Sprite, TileMap};
+
+use crate::nobiscuit_map::NobiscuitMap;
+use crate::tiles::{
+    TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_EMPTY, TILE_GOAL,
+    TILE_STAIRS_DOWN, TILE_STAIRS_UP,
 };
-use nobiscuit_engine::sprite::Sprite;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use std::collections::HashMap;
@@ -71,7 +73,7 @@ pub const SPRITE_STAIRS_DOWN: u8 = 4;
 
 /// A floor in the world: its map and its sprites
 pub struct Floor {
-    pub map: GridMap,
+    pub map: NobiscuitMap,
     pub sprites: Vec<Sprite>,
 }
 
@@ -98,11 +100,11 @@ impl World {
         }
     }
 
-    pub fn current_map(&self) -> &GridMap {
+    pub fn current_map(&self) -> &NobiscuitMap {
         &self.floors[self.current_floor].map
     }
 
-    pub fn current_map_mut(&mut self) -> &mut GridMap {
+    pub fn current_map_mut(&mut self) -> &mut NobiscuitMap {
         &mut self.floors[self.current_floor].map
     }
 

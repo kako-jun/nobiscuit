@@ -2,50 +2,26 @@ mod game;
 mod input;
 mod maze;
 mod minimap;
+mod nobiscuit_map;
 mod player;
 mod terminal;
+mod textures;
+mod tiles;
 mod ui;
 
 use std::time::{Duration, Instant};
 
-use nobiscuit_engine::floor;
-use nobiscuit_engine::framebuffer::{Color, Framebuffer};
-use nobiscuit_engine::map::TileMap;
-use nobiscuit_engine::renderer;
-use nobiscuit_engine::sprite;
+use termray::{render_floor_ceiling, render_walls, Color, Framebuffer, TileMap};
 
-use crate::game::{
-    EndingPhase, GamePhase, GameState, World, FADE_DURATION, SPRITE_BISCUIT, SPRITE_GOAL,
-    SPRITE_STAIRS_DOWN, SPRITE_STAIRS_UP,
-};
+use crate::game::{EndingPhase, GamePhase, GameState, World, FADE_DURATION};
 use crate::input::{poll_input, GameInput};
 use crate::player::Player;
 use crate::terminal::TerminalRenderer;
+use crate::textures::NobiscuitTextures;
 
 const MAX_DEPTH: f64 = 20.0;
 const TARGET_FPS: u64 = 30;
 const FRAME_DURATION: Duration = Duration::from_millis(1000 / TARGET_FPS);
-
-const FLOOR_COLOR: Color = Color {
-    r: 74,
-    g: 60,
-    b: 40,
-};
-const CEILING_COLOR: Color = Color {
-    r: 135,
-    g: 206,
-    b: 235,
-};
-
-fn sprite_color(sprite_type: u8) -> Color {
-    match sprite_type {
-        SPRITE_BISCUIT => Color::rgb(220, 180, 80), // golden biscuit
-        SPRITE_GOAL => Color::rgb(50, 220, 50),     // green exit
-        SPRITE_STAIRS_UP => Color::rgb(200, 150, 50), // warm stairs up
-        SPRITE_STAIRS_DOWN => Color::rgb(150, 100, 30), // dark stairs down
-        _ => Color::rgb(255, 255, 255),
-    }
-}
 
 fn main() {
     let mut term = TerminalRenderer::new();
@@ -236,20 +212,16 @@ fn main() {
                             .camera
                             .cast_all_rays(current_map, num_rays, MAX_DEPTH);
 
+                        let tex = NobiscuitTextures;
+
                         // Floor and ceiling
-                        floor::render_floor_ceiling(
-                            &mut fb,
-                            &rays,
-                            FLOOR_COLOR,
-                            CEILING_COLOR,
-                            &player.camera,
-                        );
+                        render_floor_ceiling(&mut fb, &rays, &tex, &player.camera);
 
                         // Walls
-                        renderer::render_walls(&mut fb, &rays, MAX_DEPTH);
+                        render_walls(&mut fb, &rays, &tex, MAX_DEPTH);
 
                         // Sprites (biscuits + goal + stairs)
-                        let projected = sprite::project_sprites(
+                        let projected = termray::project_sprites(
                             world.current_sprites(),
                             player.camera.x,
                             player.camera.y,
@@ -257,13 +229,7 @@ fn main() {
                             player.camera.fov,
                             fb.width(),
                         );
-                        sprite::render_sprites(
-                            &mut fb,
-                            &projected,
-                            &rays,
-                            &sprite_color,
-                            MAX_DEPTH,
-                        );
+                        termray::render_sprites(&mut fb, &projected, &rays, &tex, MAX_DEPTH);
 
                         // Minimap overlay
                         if state.show_minimap {

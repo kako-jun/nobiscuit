@@ -1,9 +1,9 @@
 [workspace]
-members = ["crates/nobiscuit-engine", "crates/nobiscuit-cli"]
+members = ["crates/nobiscuit-cli"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["kako-jun"]
 license = "MIT"
@@ -16,7 +16,7 @@ exclude = [".github/", "target/"]
 rust-version = "1.82.0"
 
 [workspace.dependencies]
-nobiscuit-engine = { version = "0.1.0", path = "crates/nobiscuit-engine" }
+termray = "0.1"
 crossterm = "0.28"
 rand = "0.8"
 
