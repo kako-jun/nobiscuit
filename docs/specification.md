@@ -23,12 +23,14 @@ cargo install --path crates/nobiscuit-cli
 
 ## Crate Structure
 
+Single-crate workspace; raycasting primitives come from the external `termray` crate.
+
 | Crate | Type | Dependencies | Purpose |
 |---|---|---|---|
-| nobiscuit-engine | lib | none | Raycasting engine, framebuffer, sprite system |
-| nobiscuit-cli | bin | crossterm, rand, nobiscuit-engine | Game binary |
+| termray (external) | lib | none | Generic raycasting engine, framebuffer, sprite system |
+| nobiscuit-cli | bin | termray, crossterm, rand | Game binary (maze, HUD, Japanese-house textures) |
 
-## Engine API
+## Engine API (from termray)
 
 ### Framebuffer
 
@@ -49,14 +51,22 @@ camera.cast_all_rays(map, num_rays, max_depth) -> Vec<Option<RayHit>>
 
 ### Rendering
 
+termray rendering functions take pluggable `WallTexturer` / `FloorTexturer` / `SpriteArt`
+trait objects instead of hard-coded styling. nobiscuit implements them on its
+`NobiscuitTextures` struct in `src/textures.rs`.
+
 ```rust
-render_walls(fb, rays, max_depth)
-render_floor_ceiling(fb, rays, max_depth, floor_color, ceiling_color, camera_x, camera_y, camera_angle, fov)
+render_walls(fb, rays, &wall_texturer, max_depth)
+render_floor_ceiling(fb, rays, &floor_texturer, camera)
 project_sprites(sprites, camera_x, camera_y, camera_angle, fov, screen_width) -> Vec<SpriteRenderResult>
-render_sprites(fb, projected, rays, color_fn, max_depth)
+render_sprites(fb, projected, rays, &sprite_art, max_depth)
 ```
 
 ### Map
+
+termray reserves three tile IDs (0 EMPTY / 1 WALL / 2 VOID). Anything else is
+user-defined; nobiscuit uses 3..=11 for its Japanese-house tiles
+(see `crates/nobiscuit-cli/src/tiles.rs`).
 
 ```rust
 trait TileMap {
@@ -66,13 +76,20 @@ trait TileMap {
     fn is_solid(&self, x: i32, y: i32) -> bool;
 }
 
+// termray-reserved
 const TILE_EMPTY: u8 = 0;
-const TILE_WALL: u8 = 1;
-const TILE_GOAL: u8 = 2;
-const TILE_WINDOW: u8 = 3;
-const TILE_STAIRS_UP: u8 = 4;
-const TILE_STAIRS_DOWN: u8 = 5;
-const TILE_VOID: u8 = 6;
+const TILE_WALL:  u8 = 1;
+const TILE_VOID:  u8 = 2;
+// nobiscuit-specific (src/tiles.rs)
+const TILE_GOAL:         u8 = 3;
+const TILE_WINDOW:       u8 = 4;
+const TILE_STAIRS_UP:    u8 = 5;
+const TILE_STAIRS_DOWN:  u8 = 6;
+const TILE_DOOR_FUSUMA:  u8 = 7;
+const TILE_DOOR_KITCHEN: u8 = 8;
+const TILE_DOOR_TOILET:  u8 = 9;
+const TILE_DOOR_GENKAN:  u8 = 10;
+const TILE_SHOJI:        u8 = 11;
 ```
 
 ## Game Parameters
@@ -103,13 +120,13 @@ const TILE_VOID: u8 = 6;
 
 | Value | Constant | Solid | Description |
 |---|---|---|---|
-| 0 | TILE_EMPTY | No | Walkable floor |
-| 1 | TILE_WALL | Yes | Solid wall |
-| 2 | TILE_GOAL | No | Exit marker |
-| 3 | TILE_WINDOW | Yes | Glass pane with wooden frame. Upper/lower 15% are wall texture |
-| 4 | TILE_STAIRS_UP | No | Stairs to upper floor |
-| 5 | TILE_STAIRS_DOWN | No | Stairs to lower floor |
-| 6 | TILE_VOID | Yes* | Non-existent cell (not wall, not floor). Rays return `Some(RayHit{tile: TILE_VOID})` — no wall, floor, or ceiling drawn (column stays black) |
+| 0 | TILE_EMPTY | No | Walkable floor (termray-reserved) |
+| 1 | TILE_WALL | Yes | Solid wall (termray-reserved) |
+| 2 | TILE_VOID | Yes* | Non-existent cell (not wall, not floor). Rays return `Some(RayHit{tile: TILE_VOID})` — no wall, floor, or ceiling drawn (column stays black). termray-reserved |
+| 3 | TILE_GOAL | No | Exit marker |
+| 4 | TILE_WINDOW | Yes | Glass pane with wooden frame. Upper/lower 15% are wall texture |
+| 5 | TILE_STAIRS_UP | No | Stairs to upper floor |
+| 6 | TILE_STAIRS_DOWN | No | Stairs to lower floor |
 | 7 | TILE_DOOR_FUSUMA | Yes** | Fusuma (sliding paper door). White washi + metal pull |
 | 8 | TILE_DOOR_KITCHEN | Yes** | Kitchen door. Wood grain + doorknob |
 | 9 | TILE_DOOR_TOILET | Yes** | Toilet door. Dark wood + frosted glass window |

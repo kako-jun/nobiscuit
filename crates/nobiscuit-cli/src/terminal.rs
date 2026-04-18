@@ -5,7 +5,7 @@ use crossterm::{
     style::{Color as CtColor, Print, SetBackgroundColor, SetForegroundColor},
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use nobiscuit_engine::framebuffer::{Color, Framebuffer};
+use termray::{Color, Framebuffer};
 
 #[derive(Default, PartialEq)]
 pub struct HalfBlockCell {

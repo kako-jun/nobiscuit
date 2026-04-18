@@ -46,10 +46,18 @@ cargo build --release
 
 ## Architecture
 
+nobiscuit is a thin binary on top of [`termray`](https://github.com/kako-jun/termray),
+a reusable TUI raycasting engine. termray provides the rendering skeleton
+(ray casting, wall / floor / sprite drawing) and nobiscuit supplies the
+Japanese-house textures (fusuma, shoji, window, doors) and tatami floor via
+`WallTexturer` / `FloorTexturer` / `SpriteArt` trait implementations.
+
 ```
-crates/
-  nobiscuit-engine/  -- Reusable raycasting engine (zero dependencies)
-  nobiscuit-cli/     -- Game binary (crossterm + rand)
+termray (external crate)
+  └── nobiscuit (this repo)
+        ├── maze generation, player, HUD, minimap
+        ├── NobiscuitMap (custom is_solid for goals/stairs/doors)
+        └── NobiscuitTextures (fusuma, shoji, tatami, biscuit sprites)
 ```
 
 The engine renders to an abstract framebuffer. The CLI converts it to half-block characters (`▀`) where each terminal cell represents 2 vertical pixels using foreground/background colors.

@@ -2,20 +2,11 @@
 
 ## Project Structure
 
+Raycasting primitives live in the external [termray](https://github.com/kako-jun/termray)
+crate. This repo only contains the game-specific code.
+
 ```
 crates/
-├── nobiscuit-engine/        # Reusable raycasting engine (zero external deps)
-│   └── src/
-│       ├── lib.rs           # Public API re-exports
-│       ├── math.rs          # Vec2f, angle normalization, fisheye correction
-│       ├── ray.rs           # DDA raycasting algorithm
-│       ├── map.rs           # TileMap trait + GridMap implementation
-│       ├── camera.rs        # Camera position/angle, cast_all_rays
-│       ├── renderer.rs      # Wall column rendering with procedural textures
-│       ├── floor.rs         # Floor/ceiling with perspective-correct patterns
-│       ├── sprite.rs        # Sprite projection + AA art rendering
-│       └── framebuffer.rs   # Color + pixel buffer + alpha blending
-│
 └── nobiscuit-cli/           # Game binary
     └── src/
         ├── main.rs          # Game loop (30fps: input → update → render → present)
@@ -25,12 +16,21 @@ crates/
         ├── player.rs        # Grid-based movement with animation interpolation
         ├── minimap.rs       # Semi-transparent 2D map overlay
         ├── game.rs          # Game state, World (multi-floor), hunger, pickups, stairs
-        └── ui.rs            # HUD (hunger bar, floor indicator, bitmap font messages)
+        ├── ui.rs            # HUD (hunger bar, floor indicator, bitmap font messages)
+        ├── tiles.rs         # Nobiscuit tile IDs (3..=11 — termray reserves 0..=2)
+        ├── nob_map.rs       # NobiscuitMap: TileMap impl with nobiscuit-aware is_solid
+        └── textures.rs      # WallTexturer/FloorTexturer/SpriteArt (fusuma/shoji/tatami)
 ```
+
+termray supplies: `Camera`, `Framebuffer`, `Color`, `Sprite`, `TileMap` trait, `HitSide`,
+`RayHit`, plus the render skeletons `render_walls`, `render_floor_ceiling`,
+`project_sprites`, `render_sprites`. nobiscuit plugs its visuals into those skeletons
+via the trait implementations in `textures.rs`.
 
 ## Tech Stack
 
 - **Rust** (edition 2021)
+- **termray** — Generic TUI raycasting engine (extracted from the former `nobiscuit-engine`)
 - **crossterm** 0.28 — Terminal rendering, raw mode, key input
 - **rand** 0.8 — Maze generation, biscuit placement
 
@@ -67,7 +67,9 @@ Terminal: 80 cols x 24 rows
 
 ### TileMap Trait
 
-Engine は `&dyn TileMap` で動作。CLI 側が `GridMap`（迷路生成器の出力）を渡す。
+termray は `&dyn TileMap` で動作。nobiscuit は自前の `NobiscuitMap`（迷路生成器の出力）を渡す。
+`NobiscuitMap::is_solid` は nobiscuit固有ルールを持つ — EMPTY/GOAL/STAIRS_UP/STAIRS_DOWN は歩ける、
+WINDOW/SHOJI/DOORS は実体あり。
 
 ```rust
 pub trait TileMap {
@@ -77,6 +79,8 @@ pub trait TileMap {
     fn is_solid(&self, x: i32, y: i32) -> bool;
 }
 ```
+
+termray が予約するタイルIDは `0` EMPTY / `1` WALL / `2` VOID の3つのみ。nobiscuit は `3..=11` を自前で定義（`src/tiles.rs`）。
 
 ### Irregular Map Generation
 

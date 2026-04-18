@@ -1,39 +1,26 @@
-pub type TileType = u8;
+//! Nobiscuit map: dense grid with nobiscuit-aware `is_solid`.
+//!
+//! termray's bundled `GridMap` treats any non-EMPTY tile as solid, which is
+//! the right default but not what nobiscuit needs: goals and stairs are
+//! walkable, while window/shoji/doors are solid.
 
-pub const TILE_EMPTY: u8 = 0;
-pub const TILE_WALL: u8 = 1;
-pub const TILE_GOAL: u8 = 2;
-pub const TILE_WINDOW: u8 = 3;
-pub const TILE_STAIRS_UP: u8 = 4;
-pub const TILE_STAIRS_DOWN: u8 = 5;
-pub const TILE_VOID: u8 = 6;
-pub const TILE_DOOR_FUSUMA: u8 = 7;
-pub const TILE_DOOR_KITCHEN: u8 = 8;
-pub const TILE_DOOR_TOILET: u8 = 9;
-pub const TILE_DOOR_GENKAN: u8 = 10;
-pub const TILE_SHOJI: u8 = 11;
+use termray::{TileMap, TileType};
 
-pub trait TileMap {
-    fn width(&self) -> usize;
-    fn height(&self) -> usize;
-    fn get(&self, x: i32, y: i32) -> Option<TileType>;
-    fn is_solid(&self, x: i32, y: i32) -> bool;
-}
+use crate::tiles::{
+    TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_EMPTY, TILE_GOAL,
+    TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_WALL,
+};
 
-pub struct GridMap {
+pub struct NobiscuitMap {
     width: usize,
     height: usize,
     tiles: Vec<TileType>,
 }
 
-impl GridMap {
-    /// Create a new grid map filled with walls
+impl NobiscuitMap {
+    /// Create a new map filled with walls (matches the old engine default).
     pub fn new(width: usize, height: usize) -> Self {
-        Self {
-            width,
-            height,
-            tiles: vec![TILE_WALL; width * height],
-        }
+        Self { width, height, tiles: vec![TILE_WALL; width * height] }
     }
 
     pub fn set(&mut self, x: usize, y: usize, tile: TileType) {
@@ -43,7 +30,7 @@ impl GridMap {
     }
 }
 
-impl TileMap for GridMap {
+impl TileMap for NobiscuitMap {
     fn width(&self) -> usize {
         self.width
     }
@@ -68,8 +55,8 @@ impl TileMap for GridMap {
             Some(TILE_DOOR_FUSUMA)
             | Some(TILE_DOOR_KITCHEN)
             | Some(TILE_DOOR_TOILET)
-            | Some(TILE_DOOR_GENKAN) => true, // doors are solid (closed state)
-            _ => true, // walls, windows, and out-of-bounds are solid
+            | Some(TILE_DOOR_GENKAN) => true,
+            _ => true,
         }
     }
 }
