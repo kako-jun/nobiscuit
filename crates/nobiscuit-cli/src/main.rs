@@ -2,7 +2,7 @@ mod game;
 mod input;
 mod maze;
 mod minimap;
-mod nob_map;
+mod nobiscuit_map;
 mod player;
 mod terminal;
 mod textures;

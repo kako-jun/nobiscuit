@@ -1,6 +1,6 @@
 use termray::TileMap;
 
-use crate::nob_map::NobiscuitMap;
+use crate::nobiscuit_map::NobiscuitMap;
 use crate::tiles::{
     TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_EMPTY, TILE_GOAL,
     TILE_SHOJI, TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_VOID, TILE_WALL, TILE_WINDOW,
@@ -661,7 +661,13 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (Nobisc
 /// - Small (2x2): toilet door
 ///
 /// One room on the top floor (closest to goal) gets a genkan door.
-fn place_doors(map: &mut NobiscuitMap, rooms: &[Room], width: usize, height: usize, rng: &mut impl Rng) {
+fn place_doors(
+    map: &mut NobiscuitMap,
+    rooms: &[Room],
+    width: usize,
+    height: usize,
+    rng: &mut impl Rng,
+) {
     if rooms.is_empty() {
         return;
     }
@@ -809,7 +815,12 @@ fn place_doors(map: &mut NobiscuitMap, rooms: &[Room], width: usize, height: usi
 /// Convert some interior walls into windows or shoji.
 /// A wall becomes a candidate if it has at least one empty neighbor
 /// (it's visible from a corridor). ~15% of candidates are converted; ~30% become shoji, rest windows.
-fn place_windows_and_shoji(map: &mut NobiscuitMap, width: usize, height: usize, rng: &mut impl Rng) {
+fn place_windows_and_shoji(
+    map: &mut NobiscuitMap,
+    width: usize,
+    height: usize,
+    rng: &mut impl Rng,
+) {
     let mut candidates: Vec<(usize, usize)> = Vec::new();
 
     // Skip outer border (row/col 0 and last)

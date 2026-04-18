@@ -1,8 +1,7 @@
 //! Nobiscuit-specific wall / floor / sprite texturing.
 //!
-//! These were previously hard-coded inside `nobiscuit-engine::renderer`, `::floor`
-//! and `::sprite`. Now they live here and plug into termray via the
-//! [`WallTexturer`], [`FloorTexturer`] and [`SpriteArt`] traits.
+//! Plugs into termray via the [`WallTexturer`], [`FloorTexturer`] and
+//! [`SpriteArt`] traits.
 
 use termray::{Color, FloorTexturer, HitSide, SpriteArt, SpriteDef, TileType, WallTexturer};
 
@@ -338,8 +337,16 @@ fn ceiling_tile_color(wx: f64, wy: f64, base: Color, brightness: f64) -> Color {
     }
 }
 
-pub const FLOOR_BASE: Color = Color { r: 74, g: 60, b: 40 };
-pub const CEILING_BASE: Color = Color { r: 135, g: 206, b: 235 };
+const FLOOR_BASE: Color = Color {
+    r: 74,
+    g: 60,
+    b: 40,
+};
+const CEILING_BASE: Color = Color {
+    r: 135,
+    g: 206,
+    b: 235,
+};
 
 impl FloorTexturer for NobiscuitTextures {
     fn sample_floor(&self, world_x: f64, world_y: f64, brightness: f64) -> Color {
