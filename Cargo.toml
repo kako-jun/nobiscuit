@@ -16,9 +16,7 @@ exclude = [".github/", "target/"]
 rust-version = "1.82.0"
 
 [workspace.dependencies]
-# termray is pulled locally until its 0.1.0 is published to crates.io; the
-# `version` ensures `cargo publish` / `cargo install` work once the crate is up.
-termray = { path = "../../2026/termray", version = "0.1" }
+termray = "0.1"
 crossterm = "0.28"
 rand = "0.8"
 
