@@ -16,7 +16,7 @@ exclude = [".github/", "target/"]
 rust-version = "1.85.0"
 
 [workspace.dependencies]
-termray = { version = "0.3", path = "../../2026/termray" }
+termray = "0.3"
 crossterm = "0.28"
 rand = "0.8"
 

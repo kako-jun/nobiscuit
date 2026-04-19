@@ -19,9 +19,6 @@ All notable changes to nobiscuit are documented in this file. The format is base
   heights and `Camera.pitch` are available via termray 0.3 if we ever want
   to introduce uneven floors (tatami undulation, sunken genkan), but they
   are not used in this release.
-- The workspace still pins `termray` via `path = "../../2026/termray"` until
-  termray 0.3.x is published to crates.io. The declared version is `"0.3"`,
-  so swapping back to a crates.io-only dep once published is a one-line change.
 
 ## [0.2.0] - 2026-04-18
 

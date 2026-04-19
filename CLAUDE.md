@@ -63,9 +63,6 @@ Raycasting primitives live in the [termray](https://github.com/kako-jun/termray)
 - Galagala opening: spin count determines maze size (15x13~121x91) and floors (1~12). Camera shake, color-coded spin counter, retry returns to galagala
 
 ## Future work
-- Drop the `path = "../../2026/termray"` override in `[workspace.dependencies]` once
-  termray 0.3.x is on crates.io (termray 0.1.0 / 0.2.0 are already published; 0.3.0 is
-  staged locally and will follow the usual tag → CI → publish flow)
 - Flatten single-crate workspace (rename `nobiscuit-cli` → `nobiscuit`, drop `crates/`)
 - Movable walls/windows (home maze dynamic rearrangement)
 - Infinite maze (chunk-based generation)

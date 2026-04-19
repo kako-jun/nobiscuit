@@ -273,6 +273,8 @@ dependencies = [
 [[package]]
 name = "termray"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c411b454dc5707811bed0ca96decc423f4de5d34ea746ec02796bdd0b16a6d13"
 dependencies = [
  "font8x8",
 ]
