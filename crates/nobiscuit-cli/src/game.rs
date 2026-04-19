@@ -5,8 +5,8 @@ use crate::tiles::{
     TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_EMPTY, TILE_GOAL,
     TILE_STAIRS_DOWN, TILE_STAIRS_UP,
 };
-use rand::seq::SliceRandom;
 use rand::Rng;
+use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::collections::HashSet;
 

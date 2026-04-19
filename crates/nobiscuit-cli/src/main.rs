@@ -11,10 +11,10 @@ mod ui;
 
 use std::time::{Duration, Instant};
 
-use termray::{render_floor_ceiling, render_walls, Color, Framebuffer, TileMap};
+use termray::{Color, FlatHeightMap, Framebuffer, TileMap, render_floor_ceiling, render_walls};
 
-use crate::game::{EndingPhase, GamePhase, GameState, World, FADE_DURATION};
-use crate::input::{poll_input, GameInput};
+use crate::game::{EndingPhase, FADE_DURATION, GamePhase, GameState, World};
+use crate::input::{GameInput, poll_input};
 use crate::player::Player;
 use crate::terminal::TerminalRenderer;
 use crate::textures::NobiscuitTextures;
@@ -215,19 +215,32 @@ fn main() {
                         let tex = NobiscuitTextures;
 
                         // Floor and ceiling
-                        render_floor_ceiling(&mut fb, &rays, &tex, &player.camera);
+                        render_floor_ceiling(
+                            &mut fb,
+                            &rays,
+                            &tex,
+                            &FlatHeightMap,
+                            &player.camera,
+                            MAX_DEPTH,
+                        );
 
                         // Walls
-                        render_walls(&mut fb, &rays, &tex, MAX_DEPTH);
+                        render_walls(
+                            &mut fb,
+                            &rays,
+                            &tex,
+                            &FlatHeightMap,
+                            &player.camera,
+                            MAX_DEPTH,
+                        );
 
                         // Sprites (biscuits + goal + stairs)
                         let projected = termray::project_sprites(
                             world.current_sprites(),
-                            player.camera.x,
-                            player.camera.y,
-                            player.camera.angle,
-                            player.camera.fov,
+                            &player.camera,
+                            &FlatHeightMap,
                             fb.width(),
+                            fb.height(),
                         );
                         termray::render_sprites(&mut fb, &projected, &rays, &tex, MAX_DEPTH);
 

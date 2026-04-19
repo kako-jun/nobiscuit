@@ -3,7 +3,7 @@
 //! termray reserves 0..=2 for EMPTY / WALL / VOID. Nobiscuit uses 3..=11 for
 //! its Japanese-house props.
 
-pub use termray::{TileType, TILE_EMPTY, TILE_VOID, TILE_WALL};
+pub use termray::{TILE_EMPTY, TILE_VOID, TILE_WALL, TileType};
 
 pub const TILE_GOAL: TileType = 3;
 pub const TILE_WINDOW: TileType = 4;
