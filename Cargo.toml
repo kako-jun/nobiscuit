@@ -3,8 +3,8 @@ members = ["crates/nobiscuit-cli"]
 resolver = "2"
 
 [workspace.package]
-version = "0.2.0"
-edition = "2021"
+version = "0.2.1"
+edition = "2024"
 authors = ["kako-jun"]
 license = "MIT"
 homepage = "https://github.com/kako-jun/nobiscuit"
@@ -13,10 +13,10 @@ readme = "README.md"
 keywords = ["game", "tui", "raycasting", "maze", "terminal"]
 categories = ["command-line-utilities", "games"]
 exclude = [".github/", "target/"]
-rust-version = "1.82.0"
+rust-version = "1.85.0"
 
 [workspace.dependencies]
-termray = "0.1"
+termray = "0.3"
 crossterm = "0.28"
 rand = "0.8"
 

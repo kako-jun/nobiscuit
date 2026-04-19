@@ -22,14 +22,15 @@ crates/
         └── textures.rs      # WallTexturer/FloorTexturer/SpriteArt (fusuma/shoji/tatami)
 ```
 
-termray supplies: `Camera`, `Framebuffer`, `Color`, `Sprite`, `TileMap` trait, `HitSide`,
-`RayHit`, plus the render skeletons `render_walls`, `render_floor_ceiling`,
-`project_sprites`, `render_sprites`. nobiscuit plugs its visuals into those skeletons
-via the trait implementations in `textures.rs`.
+termray supplies: `Camera`, `Framebuffer`, `Color`, `Sprite`, `TileMap` trait, `HeightMap`
+trait (+ `FlatHeightMap` for tile-flat worlds), `HitSide`, `HitFace`, `RayHit`, plus the
+render skeletons `render_walls`, `render_floor_ceiling`, `project_sprites`, `render_sprites`.
+nobiscuit plugs its visuals into those skeletons via the trait implementations in
+`textures.rs`, and passes `&FlatHeightMap` to keep its floors / ceilings flat.
 
 ## Tech Stack
 
-- **Rust** (edition 2021)
+- **Rust** (edition 2024, MSRV 1.85.0)
 - **termray** — Generic TUI raycasting engine (extracted from the former `nobiscuit-engine`)
 - **crossterm** 0.28 — Terminal rendering, raw mode, key input
 - **rand** 0.8 — Maze generation, biscuit placement

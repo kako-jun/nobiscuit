@@ -56,9 +56,11 @@ trait objects instead of hard-coded styling. nobiscuit implements them on its
 `NobiscuitTextures` struct in `src/textures.rs`.
 
 ```rust
-render_walls(fb, rays, &wall_texturer, max_depth)
-render_floor_ceiling(fb, rays, &floor_texturer, camera)
-project_sprites(sprites, camera_x, camera_y, camera_angle, fov, screen_width) -> Vec<SpriteRenderResult>
+// termray 0.3: wall/floor renderers take a HeightMap + Camera.
+// nobiscuit is a tile-flat world, so we pass &FlatHeightMap everywhere.
+render_walls(fb, rays, &wall_texturer, &FlatHeightMap, camera, max_depth)
+render_floor_ceiling(fb, rays, &floor_texturer, &FlatHeightMap, camera, max_depth)
+project_sprites(sprites, camera, &FlatHeightMap, screen_width, screen_height) -> Vec<SpriteRenderResult>
 render_sprites(fb, projected, rays, &sprite_art, max_depth)
 ```
 
