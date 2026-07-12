@@ -4,6 +4,21 @@ All notable changes to nobiscuit are documented in this file. The format is base
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Maze generation rewritten from mask-based per-island DFS to BSP space partition
+  (家の間取り化, #31). Each island's bounding box is recursively split (even-coordinate
+  split lines) into rectangular rooms; adjacent rooms are joined by fusuma doors via a
+  spanning tree plus ~15% loop doors, and up to two straight width-3 corridors are carved
+  per island. Removed `generate_corridors`, `carve_island`, and `place_rooms`; added
+  `bsp_layout`/`bsp_split`, `connect_rooms`, `verify_connectivity`, and `generate_goal_floor`.
+- The top floor now uses a fixed template (descend-stairs → vertical corridor → fusuma →
+  Nobita's room with the GOAL centered) instead of a generated maze.
+- `generate_floor` verifies reachability with a flood fill and regenerates (up to 10 tries)
+  when a walkable cell is unreachable, walling off any stragglers as a last resort. The spawn
+  corner `(1,1)` is always made walkable and wired into the layout.
+
 ## [0.2.1] - 2026-04-19
 
 ### Changed

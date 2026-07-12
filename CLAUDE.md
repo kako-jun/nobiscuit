@@ -50,8 +50,8 @@ Raycasting primitives live in the [termray](https://github.com/kako-jun/termray)
 ## Current features
 
 - Multi-floor maze (3 floors connected by stairs)
-- Irregular maze shapes (VOID tiles + mask-based generation, per-island DFS)
-- Corridor backbone + room placement (2x2~5x4 rooms, 2-cell-wide main corridors, corridor-adjacent room priority)
+- Irregular maze shapes (VOID tiles + mask-defined island silhouettes)
+- BSP floor-plan generation (家の間取り化): rectangular rooms tiled by binary space partition, adjacent rooms joined by fusuma doors (spanning tree + ~15% loop doors), up to 2 straight width-3 corridors per island, flood-fill connectivity verification with regeneration/wall-off fallback, fixed top-floor goal template
 - Doors (fusuma, kitchen, toilet, genkan) with auto-open/close and corridor-hub structure
 - Window tiles (glass pane with wooden frame, embedded in wall with top/bottom wall frame)
 - Shoji tiles (wooden lattice + washi paper, embedded in wall — upper 20% / lower 30% wall frame)
