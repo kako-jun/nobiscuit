@@ -113,10 +113,11 @@ const TILE_SHOJI:        u8 = 11;
 | Minimap alpha | 0.4 | Overlay transparency |
 | Mask coverage | 40-70% | Fraction of DFS nodes included in irregular mask |
 | Seed points | 2-4 | Number of BFS seed points for mask generation |
-| Room sizes | 2x2 ~ 5x4 | Interior dimensions of placed rooms |
-| Room attempts | 120 | Maximum placement attempts per floor |
-| Corridor ratio | 20-30% | Fraction of island DFS nodes used as corridor backbone |
-| Corridor width | 2 cells | Main corridors are widened to 2 cells |
+| BSP leaf size | 5 ~ 11 cells | Wall-inclusive region size (interior 3 ~ 9) before a leaf stops splitting |
+| BSP max depth | 5 | Recursion cap for space partition |
+| Corridors per island | up to 2 | Straight width-3 hallways carved on low-depth splits |
+| Extra loop doors | ~15% | Non-spanning-tree adjacency edges opened as loops |
+| Connectivity retries | 10 | Regenerations if flood fill finds unreachable cells (then wall-off fallback) |
 
 ## Tile Types
 
