@@ -503,6 +503,14 @@ fn bsp_layout(
     }
 
     // Carve corridors (width 3) in the gaps between children.
+    //
+    // Unlike room carve, this deliberately ignores the mask and carves the full
+    // width-3 strip solid. Skipping mask-VOID cells here (per-cell or dropping
+    // mostly-VOID strips) perforates the band into 1-cell-wide fragments and lets
+    // the downstream spawn/connectivity repair stitch them with width-1 paths,
+    // which regresses the `no_one_wide_dfs_corridors` invariant. The solid carve
+    // is load-bearing: it guarantees corridors read as width-3 passages. VOID that
+    // ends up under a corridor is re-sealed to WALL by `seal_void_boundaries`.
     let mut corridor_cells: Vec<(usize, usize)> = Vec::new();
     for c in &corridors {
         if c.horizontal {
@@ -794,7 +802,10 @@ pub fn generate_maze(width: usize, height: usize, rng: &mut impl Rng) -> (Nobisc
     // black lines/areas to appear inside playable spaces.
     seal_void_boundaries(&mut map, width, height);
 
-    // Place goal on the largest island.
+    // Place goal on the largest island. On non-top floors `build_floor_layout`
+    // immediately converts this GOAL back to EMPTY, and the top floor uses the
+    // template instead of this path; the only surviving effect is as a pseudo
+    // anchor that `place_doors` uses to pick the genkan room (closest to goal).
     let largest_island = islands.iter().max_by_key(|i| i.len());
     if let Some(island) = largest_island {
         let mut goal_placed = false;
@@ -1207,6 +1218,16 @@ const GOAL_TEMPLATE: [&str; 11] = [
 /// The mask/BSP path is skipped: the whole interior becomes VOID and the template
 /// is stamped in the center. STAIRS_UP is never placed (this is the top floor).
 fn generate_goal_floor(width: usize, height: usize) -> NobiscuitMap {
+    debug_assert!(
+        width % 2 == 1 && height % 2 == 1,
+        "maze dimensions must be odd"
+    );
+    debug_assert!(
+        width >= GOAL_TEMPLATE[0].len() && height >= GOAL_TEMPLATE.len(),
+        "goal floor must fit the {}x{} template",
+        GOAL_TEMPLATE[0].len(),
+        GOAL_TEMPLATE.len()
+    );
     let mut map = NobiscuitMap::new(width, height);
 
     // Interior VOID (outer ring stays WALL from NobiscuitMap::new).
@@ -1235,6 +1256,11 @@ fn generate_goal_floor(width: usize, height: usize) -> NobiscuitMap {
             map.set(start_x + cx, start_y + cy, tile);
         }
     }
+
+    // Seal VOID cells adjacent to walkable cells (same invariant as generate_floor).
+    // The template's STAIRS_DOWN sits directly above a VOID row; without this the
+    // walkable stair foot would border VOID and render as a black leak in rays.
+    seal_void_boundaries(&mut map, width, height);
 
     map
 }
