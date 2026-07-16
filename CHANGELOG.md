@@ -6,6 +6,8 @@ All notable changes to nobiscuit are documented in this file. The format is base
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-16
+
 ### Changed
 - Maze generation rewritten from mask-based per-island DFS to BSP space partition
   (家の間取り化, #31). Each island's bounding box is recursively split (even-coordinate

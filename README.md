@@ -10,6 +10,8 @@ Inspired by Doraemon's "Home Maze" episode — wander through an endless house, 
 - Procedural wall textures (wood grain, nageshi, baseboard)
 - Perspective-correct floor and ceiling rendering
 - Multi-floor maze (3 floors connected by stairs)
+- BSP floor-plan generation with rectangular rooms, fusuma connections, corridor strips,
+  reachability checks, and a fixed final goal floor
 - Window tiles with glass pane texture
 - Biscuit sprites with hunger system
 - Semi-transparent minimap overlay
@@ -18,7 +20,7 @@ Inspired by Doraemon's "Home Maze" episode — wander through an endless house, 
 ## Install
 
 ```bash
-cargo install --path crates/nobiscuit-cli
+cargo install nobiscuit-cli
 ```
 
 Or build from source:

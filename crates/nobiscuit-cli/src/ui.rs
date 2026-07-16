@@ -48,7 +48,7 @@ pub fn render_hunger_bar(fb: &mut Framebuffer, hunger: f64) {
 
 /// Render floor indicator below the hunger bar (e.g. "2F")
 pub fn render_floor_indicator(fb: &mut Framebuffer, current_floor: usize, total_floors: usize) {
-    let text = format!("{}F", current_floor);
+    let text = format!("{current_floor}F");
     let char_w = 4;
     let x0 = BAR_MARGIN;
     let y0 = BAR_MARGIN + BAR_HEIGHT + 2;
@@ -156,15 +156,15 @@ pub fn render_clear_screen(
         // Score display
         let score_y = center_y + 10;
         let score_color = Color::rgb(180, 180, 180);
-        let biscuit_text = format!("Biscuits  {}", biscuits_eaten);
+        let biscuit_text = format!("Biscuits  {biscuits_eaten}");
         render_centered_text(fb, &biscuit_text, score_color, score_y);
 
         let mins = elapsed_time as u32 / 60;
         let secs = elapsed_time as u32 % 60;
-        let time_text = format!("Survived  {}m {}s", mins, secs);
+        let time_text = format!("Survived  {mins}m {secs}s");
         render_centered_text(fb, &time_text, score_color, score_y + 8);
 
-        let floor_text = format!("Floors  {}", floors_visited);
+        let floor_text = format!("Floors  {floors_visited}");
         render_centered_text(fb, &floor_text, score_color, score_y + 16);
     }
 
@@ -208,7 +208,7 @@ pub fn render_garagara_screen(fb: &mut Framebuffer, spins: u32, shake_timer: f64
     fb.clear(Color::rgb(0, 0, 0));
 
     // Draw spin count as large 3x-scaled digits in the center
-    let text = format!("{}", spins);
+    let text = format!("{spins}");
     let scale = 3_usize;
     let char_w = 4 * scale; // 3px * scale + scale gap
     let char_h = 5 * scale;
