@@ -8,7 +8,9 @@ mod terminal;
 mod textures;
 mod tiles;
 mod ui;
+mod windows;
 
+use rand::{SeedableRng, rngs::StdRng};
 use std::time::{Duration, Instant};
 
 use termray::{Color, FlatHeightMap, Framebuffer, TileMap, render_floor_ceiling, render_walls};
@@ -31,7 +33,11 @@ fn main() {
 
     let mut fb = Framebuffer::new(fb_width, fb_height);
 
-    let mut rng = rand::thread_rng();
+    let mut rng = std::env::var("NOBISCUIT_SEED")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .map(StdRng::seed_from_u64)
+        .unwrap_or_else(StdRng::from_entropy);
 
     // Start with a dummy world; the real one is created after galagara
     let mut world = World::new(1, 3, 3, &mut rng);
@@ -41,6 +47,19 @@ fn main() {
         spins: 0,
         shake_timer: 0.0,
     };
+
+    // Reproducible direct entry for visual checks; unset keeps the opening.
+    if let Some(spins) = std::env::var("NOBISCUIT_SPINS")
+        .ok()
+        .and_then(|value| value.parse::<u32>().ok())
+        .filter(|&spins| spins > 0)
+    {
+        let params = game::maze_params_from_spins(spins);
+        world = World::new(params.num_floors, params.width, params.height, &mut rng);
+        state = GameState::new();
+        state.init_visited(&world);
+        state.phase = GamePhase::Playing;
+    }
 
     let mut last_frame = Instant::now();
 
@@ -243,6 +262,14 @@ fn main() {
                             fb.height(),
                         );
                         termray::render_sprites(&mut fb, &projected, &rays, &tex, MAX_DEPTH);
+                        windows::render_windows(
+                            &mut fb,
+                            current_map,
+                            &player.camera,
+                            &rays,
+                            &projected,
+                            MAX_DEPTH,
+                        );
 
                         // Minimap overlay
                         if state.show_minimap {

@@ -1,6 +1,6 @@
 //! Nobiscuit-specific tile IDs layered on top of termray's reserved trio.
 //!
-//! termray reserves 0..=2 for EMPTY / WALL / VOID. Nobiscuit uses 3..=11 for
+//! termray reserves 0..=2 for EMPTY / WALL / VOID. Nobiscuit uses 3..=12 for
 //! its Japanese-house props.
 
 pub use termray::{TILE_EMPTY, TILE_VOID, TILE_WALL, TileType};
@@ -14,3 +14,6 @@ pub const TILE_DOOR_KITCHEN: TileType = 8;
 pub const TILE_DOOR_TOILET: TileType = 9;
 pub const TILE_DOOR_GENKAN: TileType = 10;
 pub const TILE_SHOJI: TileType = 11;
+
+/// Permanently open interior window; decoration windows remain solid.
+pub const TILE_WINDOW_PASS: TileType = 12;
