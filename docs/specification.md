@@ -67,7 +67,7 @@ render_sprites(fb, projected, rays, &sprite_art, max_depth)
 ### Map
 
 termray reserves three tile IDs (0 EMPTY / 1 WALL / 2 VOID). Anything else is
-user-defined; nobiscuit uses 3..=11 for its Japanese-house tiles
+user-defined; nobiscuit uses 3..=12 for its Japanese-house tiles
 (see `crates/nobiscuit-cli/src/tiles.rs`).
 
 ```rust
@@ -92,6 +92,7 @@ const TILE_DOOR_KITCHEN: u8 = 8;
 const TILE_DOOR_TOILET:  u8 = 9;
 const TILE_DOOR_GENKAN:  u8 = 10;
 const TILE_SHOJI:        u8 = 11;
+const TILE_WINDOW_PASS:  u8 = 12;
 ```
 
 ## Game Parameters
@@ -111,13 +112,12 @@ const TILE_SHOJI:        u8 = 11;
 | Pickup distance | 0.5 | World units to pick up item |
 | Minimap scale | 2 | Pixels per map tile |
 | Minimap alpha | 0.4 | Overlay transparency |
-| Mask coverage | 40-70% | Fraction of DFS nodes included in irregular mask |
-| Seed points | 2-4 | Number of BFS seed points for mask generation |
-| BSP leaf size | 5 ~ 11 cells | Wall-inclusive region size (interior 3 ~ 9) before a leaf stops splitting |
-| BSP max depth | 5 | Recursion cap for space partition |
-| Corridors per island | up to 2 | Straight width-3 hallways carved on low-depth splits |
-| Extra loop doors | ~15% | Non-spanning-tree adjacency edges opened as loops |
-| Connectivity retries | 10 | Regenerations if flood fill finds unreachable cells (then wall-off fallback) |
+| BSP room interior | 3–9 cells per axis | Split until bounded; no fixed depth cutoff |
+| Main hallway | Width 3 | Reserved strip with intact walls and entrances on both sides |
+| Standard hallway guarantee | Map ≥25×19 | Length ≥9, at least two room entrances on each side |
+| Shared-wall openings | 1 per region pair | Kept away from corners; jambs preserved |
+| Extra loop connections | ~15% | Remaining region pairs, rounded up; at least two room-room links where possible |
+| Connectivity repairs | None | Single connected region graph; stairs cannot be removed by fallback |
 
 ## Tile Types
 
@@ -135,6 +135,7 @@ const TILE_SHOJI:        u8 = 11;
 | 9 | TILE_DOOR_TOILET | Yes** | Toilet door. Dark wood + frosted glass window |
 | 10 | TILE_DOOR_GENKAN | Yes** | Entrance door. Heavy dark wood + panel grooves |
 | 11 | TILE_SHOJI | Yes | Shoji screen. Wooden lattice + white washi paper. Upper 20% and lower 30% are wall texture |
+| 12 | TILE_WINDOW_PASS | No | Open shared-wall window with cyan frame; visible from both rooms and directly walkable |
 
 \* VOID is solid for movement (impassable). Raycasting returns a special hit that suppresses all rendering for that column.
 
@@ -160,3 +161,10 @@ const TILE_SHOJI:        u8 = 11;
 | Wood grain | Varies by tile hash | Sinusoidal vertical stripes |
 | Plank lines | wall_y thirds | Faint horizontal divisions |
 | Hue variation | Per tile hash | ±4.5 color shift |
+
+## Reproducible Start
+
+- `NOBISCUIT_SEED`: u64 seed for the random stream. Unset/invalid selects a random seed.
+- `NOBISCUIT_SPINS`: positive u32; skip the initial lottery at this spin count. Unset/invalid/zero retains the lottery.
+- 1–2 spins produce the fixed goal floor only; use ≥3 to inspect generated house plans.
+- Retry keeps the random stream and returns to the lottery.
