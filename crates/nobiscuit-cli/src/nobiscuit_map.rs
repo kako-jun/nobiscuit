@@ -2,7 +2,8 @@
 //!
 //! termray's bundled `GridMap` treats any non-EMPTY tile as solid, which is
 //! the right default but not what nobiscuit needs: goals and stairs are
-//! walkable, while window/shoji/doors are solid.
+//! walkable along with open interior windows; decorative windows, shoji and
+//! closed doors are solid.
 
 use termray::{TileMap, TileType};
 

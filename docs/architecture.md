@@ -17,6 +17,7 @@ crates/
         ├── minimap.rs       # Semi-transparent 2D map overlay
         ├── game.rs          # Game state, World (multi-floor), hunger, pickups, stairs
         ├── ui.rs            # HUD (hunger bar, floor indicator, bitmap font messages)
+        ├── windows.rs       # Open window frames with per-pixel depth compositing
         ├── tiles.rs         # Nobiscuit tile IDs (3..=12 — termray reserves 0..=2)
         ├── nobiscuit_map.rs       # NobiscuitMap: TileMap impl with nobiscuit-aware is_solid
         └── textures.rs      # WallTexturer/FloorTexturer/SpriteArt (fusuma/shoji/tatami)
@@ -117,6 +118,7 @@ Input (crossterm)
         → Floor/Ceiling renderer (perspective-correct world coords)
         → Wall renderer (procedural texture)
         → Sprite renderer (AA art + depth test)
+        → Open window frame pass (per-pixel depth vs walls/sprites/other frames)
           → Minimap overlay (alpha blend)
             → HUD (hunger bar, messages)
               → Terminal renderer (delta flush)

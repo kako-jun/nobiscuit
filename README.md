@@ -79,6 +79,9 @@ NOBISCUIT_DEBUG=1 NOBISCUIT_SEED=42 NOBISCUIT_SPINS=5 cargo run --release
 `NOBISCUIT_SEED` accepts an unsigned 64-bit integer. `NOBISCUIT_SPINS` accepts a
 positive 32-bit integer and skips the initial lottery; use at least 3 spins to
 explore generated floors (1–2 spins select only the fixed final room). Invalid
-values fall back to random generation or the normal lottery. Retry returns to
+values fall back to random generation or the normal lottery. The same seed and
+spin count reproduce the initial world on each launch; the opening placeholder
+uses a separate random stream. Single-floor games start at the final room entrance.
+Retry returns to
 the lottery and continues the same random stream. Debug mode reveals the minimap;
 W/S move, A/D turn, M toggles the map, and Q quits.

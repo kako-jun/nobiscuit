@@ -513,7 +513,7 @@ mod tests {
     }
 
     /// The BSP layout is rooms + wide corridors, so 1-cell-wide passages (which
-    /// only come from spawn-correction paths and door openings) must stay rare.
+    /// only come from door/window openings) must stay rare.
     #[test]
     fn no_one_wide_dfs_corridors() {
         for seed in 0..40u64 {

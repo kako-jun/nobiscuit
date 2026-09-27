@@ -164,7 +164,8 @@ const TILE_WINDOW_PASS:  u8 = 12;
 
 ## Reproducible Start
 
-- `NOBISCUIT_SEED`: u64 seed for the random stream. Unset/invalid selects a random seed.
+- `NOBISCUIT_SEED`: u64 seed for the random stream. Unset/invalid selects a random seed. The same seed/spins reproduce the first world each launch; placeholder generation uses a separate stream.
+- Initial spawn: ordinary ground floors use (1.5, 1.5); a single-floor world uses the centered goal template’s entrance stair. Both lottery and direct entry use the same selection.
 - `NOBISCUIT_SPINS`: positive u32; skip the initial lottery at this spin count. Unset/invalid/zero retains the lottery.
 - 1–2 spins produce the fixed goal floor only; use ≥3 to inspect generated house plans.
 - Retry keeps the random stream and returns to the lottery.
