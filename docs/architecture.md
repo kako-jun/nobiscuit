@@ -12,13 +12,14 @@ crates/
         ├── main.rs          # Game loop (30fps: input → update → render → present)
         ├── terminal.rs      # Half-block ANSI renderer with delta flushing
         ├── input.rs         # Non-blocking crossterm key polling
-        ├── maze.rs          # Mask-shaped, BSP room/corridor floor-plan generation
+        ├── maze.rs          # Non-overlapping BSP house plan and region connection graph
         ├── player.rs        # Grid-based movement with animation interpolation
         ├── minimap.rs       # Semi-transparent 2D map overlay
         ├── game.rs          # Game state, World (multi-floor), hunger, pickups, stairs
         ├── ui.rs            # HUD (hunger bar, floor indicator, bitmap font messages)
-        ├── tiles.rs         # Nobiscuit tile IDs (3..=11 — termray reserves 0..=2)
-        ├── nob_map.rs       # NobiscuitMap: TileMap impl with nobiscuit-aware is_solid
+        ├── windows.rs       # Open window frames with per-pixel depth compositing
+        ├── tiles.rs         # Nobiscuit tile IDs (3..=12 — termray reserves 0..=2)
+        ├── nobiscuit_map.rs       # NobiscuitMap: TileMap impl with nobiscuit-aware is_solid
         └── textures.rs      # WallTexturer/FloorTexturer/SpriteArt (fusuma/shoji/tatami)
 ```
 
@@ -69,7 +70,7 @@ Terminal: 80 cols x 24 rows
 ### TileMap Trait
 
 termray は `&dyn TileMap` で動作。nobiscuit は自前の `NobiscuitMap`（迷路生成器の出力）を渡す。
-`NobiscuitMap::is_solid` は nobiscuit固有ルールを持つ — EMPTY/GOAL/STAIRS_UP/STAIRS_DOWN は歩ける、
+`NobiscuitMap::is_solid` は nobiscuit固有ルールを持つ — EMPTY/GOAL/STAIRS_UP/STAIRS_DOWN/WINDOW_PASS は歩ける、
 WINDOW/SHOJI/DOORS は実体あり。
 
 ```rust
@@ -81,24 +82,21 @@ pub trait TileMap {
 }
 ```
 
-termray が予約するタイルIDは `0` EMPTY / `1` WALL / `2` VOID の3つのみ。nobiscuit は `3..=11` を自前で定義（`src/tiles.rs`）。
+termray が予約するタイルIDは `0` EMPTY / `1` WALL / `2` VOID の3つのみ。nobiscuit は `3..=12` を自前で定義（`src/tiles.rs`）。
 
-### Irregular Map Generation
+### House Plan Generation
 
-迷路は不定形マスクベースで生成される:
+通常階は重複しない1つのBSP間取りとして生成する。島の外接矩形を重ねて彫る方式は使わない。
 
-1. **マスク生成**: 2-4 個のシード点から BFS でアメーバ状に拡張。全 DFS ノードの 40-70% を選択（島のシルエットを決めるためだけに使う）
-2. **VOID 設定**: マスク外の内部セルを `TILE_VOID` に設定（外周は壁のまま）
-3. **島検出**: マスク内の連結成分（島）を BFS で特定
-4. **BSP 空間分割**: 各島のバウンディング矩形を BSP で再帰分割（分割線は必ず偶数座標＝壁）。葉リージョンの内部を1セル内側に inset した矩形を部屋として `TILE_EMPTY` で塗る（家の間取り化）。マスクが過半 VOID のリージョンはスキップして島のシルエットを保つ
-5. **廊下**: 低 depth の分割で最大2本、幅3の直線廊下を彫る。分割の両側に壁を1枚ずつ残すため部屋と広間化せず隣接する
-6. **部屋接続**: 部屋・廊下成分の隣接グラフ（壁1枚を挟んで向かい合うもの）から全域木を張り、ふすまで開口。さらに約15%の余剰辺をループとして開ける。スポーン(1,1)は必ず歩行可能にし最寄りの空きへ幅1で接続
-7. **ドア配置**: 部屋外周の壁セルで反対側が空きのものを候補にドアを配置。部屋サイズで種類決定（既に開いたふすまは上書きしない）
-8. **VOID 境界封止**: 歩行可能セルに隣接する VOID セルを WALL に変換。マスク境界で VOID が直接見える黒線バグを防止
-9. **階段配置**: 廊下にのみ配置（部屋内は除外。廊下が無い最小マップでは部屋内フォールバック）。各島に階段を配置し、異なる階の異なる島に遷移させることで迷子感を演出
-10. **到達性検証**: スポーン・階段からの flood fill で全歩行可能セルの到達性を検証。不合格なら最大10回再生成、最終手段は未到達セルを WALL で埋める
-11. **ゴール階**: 最上階は BSP を通さず固定テンプレート（下り階段→縦廊下→ふすま→のび太の部屋(中央にGOAL)）を中央にスタンプ
-12. **レイキャスティング**: VOID に ray が到達すると `Some(RayHit{tile: TILE_VOID})` を返す。壁描画なし・床天井も抑制され、列全体が黒に
+1. **主廊下の予約**: 長辺を分割し、幅3セルの長い廊下を壁2枚の間に確保。25×19以上では長さ9以上、左右各2室以上が面する。最小マップも収まる範囲で縮小構成にする。
+2. **部屋分割**: 両側の領域を内寸3〜9セルになるまで再帰分割。固定深度で打ち切らない。各セルの領域所有者を記録し、床の重複を禁止する。
+3. **接続候補**: 壁1枚の両側にある領域のペアごとに候補を集約。角・T字接合を避け、開口の両脇に壁を残す。同じペアには1開口だけ置く。
+4. **接続グラフ**: 主廊下に面する各室へ入口を確保し、全域木で残りを接続。残りの領域ペアの約15%をループにし、可能なら部屋間の直接接続を最低2つ確保する。
+5. **扉と窓**: 接続を増やす後処理は行わず、選ばれた接続に扉の種類を割り当てる。部屋間接続の最初を通り抜け窓、次を扉、それ以降の一部を窓にする。残った壁にはsolidな装飾窓・障子を配置する。
+6. **階段**: 通常階の廊下に上り・下りを各1つ（必要な方向のみ）配置。接続が最初から連結しているため再生成や未到達セル壁化に頼らない。単一始点のflood fillで検証する。
+7. **ゴール階**: 最上階は固定テンプレート（下り階段→縦廊下→ふすま→のび太の部屋）。周囲VOIDと歩行空間の境界は壁で封止する。
+
+通り抜け窓は衝突・通常rayでは非solid。`windows.rs` が共有壁の中央面にある窓枠を列ごとに追跡し、奥行きを持つ画素として合成する。複数の窓枠・壁・spriteの前後関係を保ち、開口の中央からは隣室が見える。装飾窓は従来通りsolidである。
 
 ### Sprite System
 
@@ -120,6 +118,7 @@ Input (crossterm)
         → Floor/Ceiling renderer (perspective-correct world coords)
         → Wall renderer (procedural texture)
         → Sprite renderer (AA art + depth test)
+        → Open window frame pass (per-pixel depth vs walls/sprites/other frames)
           → Minimap overlay (alpha blend)
             → HUD (hunger bar, messages)
               → Terminal renderer (delta flush)

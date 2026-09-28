@@ -6,6 +6,16 @@ All notable changes to nobiscuit are documented in this file. The format is base
 
 ## [Unreleased]
 
+### Changed
+- Rebuilt ordinary floors as one non-overlapping BSP house plan with bounded rooms,
+  a long hallway lined with doors on both sides, and at most one opening per shared
+  region pair. Removed duplicate wall openings and regeneration/wall-off repairs (#35).
+
+### Added
+- Walk-through windows with visible depth-composited frames, direct room-to-room
+  routes, and a distinct minimap color; decorative windows remain solid (#34, #35).
+- `NOBISCUIT_SEED` and `NOBISCUIT_SPINS` for reproducible exploration (#35).
+
 ## [0.3.0] - 2026-07-16
 
 ### Changed

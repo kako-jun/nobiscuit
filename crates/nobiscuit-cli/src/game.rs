@@ -100,6 +100,22 @@ impl World {
         }
     }
 
+    /// Ordinary ground floors start at (1,1); a one-floor world starts at the
+    /// entrance stair of its centered goal template instead.
+    pub fn start_position(&self) -> (f64, f64) {
+        if self.floors.len() == 1 {
+            let map = &self.floors[0].map;
+            for y in 0..map.height() {
+                for x in 0..map.width() {
+                    if map.get(x as i32, y as i32) == Some(TILE_STAIRS_DOWN) {
+                        return (x as f64 + 0.5, y as f64 + 0.5);
+                    }
+                }
+            }
+        }
+        (1.5, 1.5)
+    }
+
     pub fn current_map(&self) -> &NobiscuitMap {
         &self.floors[self.current_floor].map
     }
@@ -137,9 +153,7 @@ impl World {
 
     /// Move player to a different floor. Returns the spawn position on the new floor.
     ///
-    /// Scans the full map for the first matching stair tile. With multiple islands
-    /// per floor, the player may land on a different island than expected — this is
-    /// intentional, creating the "wandering between islands" exploration effect.
+    /// Finds the matching stair within the destination floor's connected plan.
     pub fn change_floor(&mut self, target_floor: usize, direction: StairDirection) -> (f64, f64) {
         self.current_floor = target_floor;
 

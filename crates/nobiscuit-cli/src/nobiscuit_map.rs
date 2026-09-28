@@ -2,13 +2,14 @@
 //!
 //! termray's bundled `GridMap` treats any non-EMPTY tile as solid, which is
 //! the right default but not what nobiscuit needs: goals and stairs are
-//! walkable, while window/shoji/doors are solid.
+//! walkable along with open interior windows; decorative windows, shoji and
+//! closed doors are solid.
 
 use termray::{TileMap, TileType};
 
 use crate::tiles::{
     TILE_DOOR_FUSUMA, TILE_DOOR_GENKAN, TILE_DOOR_KITCHEN, TILE_DOOR_TOILET, TILE_EMPTY, TILE_GOAL,
-    TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_WALL,
+    TILE_STAIRS_DOWN, TILE_STAIRS_UP, TILE_WALL, TILE_WINDOW_PASS,
 };
 
 pub struct NobiscuitMap {
@@ -55,9 +56,11 @@ impl TileMap for NobiscuitMap {
         // Doors are kept as an explicit arm (instead of falling through to `_ => true`)
         // so the intent — "doors are solid while closed" — stays visible in the source.
         match self.get(x, y) {
-            Some(TILE_EMPTY) | Some(TILE_GOAL) | Some(TILE_STAIRS_UP) | Some(TILE_STAIRS_DOWN) => {
-                false
-            }
+            Some(TILE_EMPTY)
+            | Some(TILE_GOAL)
+            | Some(TILE_STAIRS_UP)
+            | Some(TILE_STAIRS_DOWN)
+            | Some(TILE_WINDOW_PASS) => false,
             Some(TILE_DOOR_FUSUMA)
             | Some(TILE_DOOR_KITCHEN)
             | Some(TILE_DOOR_TOILET)
